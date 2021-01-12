@@ -1,0 +1,27 @@
+{
+	"name": "SignETS plugin",
+	"manifest_version": 2,
+	"version": "0.0.1",
+	"description": "Une extension pour améliorer l'interface de SignETS",
+	"icons": {
+		"128": "assets/icon128.png",
+		"48": "assets/icon48.png",
+		"16": "assets/icon16.png"
+	},
+	"browser_action": {
+		"default_icon": "assets/icon16.png"
+	},
+	"content_scripts": [{
+		"matches": ["*://signets-ens.etsmtl.ca/*"],
+		"css": [
+			"SimpleBar/simplebar.css"
+		],
+		"js": [
+			"content.js",
+			"SimpleBar/simplebar.min.js"
+		]
+	}],
+	"permissions": [
+		"storage"
+	]
+}
