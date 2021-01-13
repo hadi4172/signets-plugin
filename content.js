@@ -10,17 +10,15 @@ window.onload = () => {
             overflow:auto!important;
         }`);
 
-        for (let table of Array.from(document.querySelectorAll('.igtab_Office2010BlueTHContent'))) {
-            table.setAttribute("data-simplebar", "");
-        };
-
-
         const toSplit = (elem) => {
             return elem.innerHTML.replace(/ sur un maximum de /g, "/");
         }
 
         let session = document.querySelector('#ctl00_ContentPlaceHolderMain_txtTrimestre1').innerHTML.replace(/ /g, "");
         let cours = document.querySelector('#ctl00_ContentPlaceHolderMain_txtSigle1').innerHTML;
+
+        let grosConteneur = document.querySelector('.igtab_Office2010BlueTHContentHolder');
+        grosConteneur.style.height = "";   // to auto resize height
 
         let mesNotes = Array.from(document.querySelectorAll('[aria-describedby="grilleNotes_columnheader_3"]'));
         let notesGrp = Array.from(document.querySelectorAll('[aria-describedby="grilleNotes_columnheader_6"]'));
@@ -62,7 +60,7 @@ window.onload = () => {
         }
 
         chrome.storage.sync.set({ [session + cours]: [rangCentileTotal.innerHTML, noteTotale.style.backgroundColor] });
-        console.log(`saved:`,`${session + cours}: ${[rangCentileTotal.innerHTML, noteTotale.style.backgroundColor]}`);
+        console.log(`saved:`, `${session + cours}: ${[rangCentileTotal.innerHTML, noteTotale.style.backgroundColor]}`);
 
         if (denominateurTotal !== 0) {
 
@@ -159,8 +157,8 @@ window.onload = () => {
                             rangCentile.style.userSelect = "auto";
                             rangCentile.parentNode.setAttribute("style", `background-color: ${arg[cle][1]};`);
                         } else {
-                            if(rangCentile.style.color !== "black") rangCentile.style.color = "white";
-                            if(rangCentile.style.userSelect !== "auto") rangCentile.style.userSelect = "none";
+                            if (rangCentile.style.color !== "black") rangCentile.style.color = "white";
+                            if (rangCentile.style.userSelect !== "auto") rangCentile.style.userSelect = "none";
                         }
                     });
                 }
@@ -171,9 +169,9 @@ window.onload = () => {
 
         for (let expandButton of expandButtons) {
             setTimeout(() => {
-                if(expandButton.getAttribute("alt")==="Expand Row") expandButton.click();
-            },100);
-            
+                if (expandButton.getAttribute("alt") === "Expand Row") expandButton.click();
+            }, 100);
+
             expandButton.addEventListener("click", function () {
                 setTimeout(() => {
                     afficherRangCentile();
