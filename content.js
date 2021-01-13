@@ -111,7 +111,7 @@ window.onload = () => {
             }
 
         }
-    } else if (window.location.href.includes(`https://signets-ens.etsmtl.ca/Secure/MesNotes`)) {
+    } else if (window.location.href.includes(`https://signets-ens.etsmtl.ca/Secure/MesNotes`) || window.location.href === "https://signets-ens.etsmtl.ca/") {
         console.log(`[Interface cours]`);
         let expandButtons = Array.from(document.querySelectorAll('[mkr="expColBtn"]'));
 
