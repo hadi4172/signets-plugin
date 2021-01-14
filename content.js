@@ -1,14 +1,20 @@
 window.onload = () => {
     if (window.location.href.includes(`signets-ens.etsmtl.ca/Secure/DetailsCoursGroupe`)) {
         console.log(`[Interface notes]`);
-        injectCSS(/*css*/`
-        td{
-            background-color:inherit !important;
-        }
-        
-        .igtab_Office2010BlueTHContent{
-            overflow:auto!important;
-        }`);
+
+        chrome.storage.sync.get('noColors', function (arg) {
+            if (!arg.noColors) {
+                injectCSS( /*css*/ `
+                    td{
+                        background-color:inherit !important;
+                    }
+                    
+                    .igtab_Office2010BlueTHContent{
+                        overflow:auto!important;
+                    }`
+                );
+            }
+        });
 
         const toSplit = (elem) => {
             return elem.innerHTML.replace(/ sur un maximum de /g, "/");
@@ -18,7 +24,7 @@ window.onload = () => {
         let cours = document.querySelector('#ctl00_ContentPlaceHolderMain_txtSigle1').innerHTML;
 
         let grosConteneur = document.querySelector('.igtab_Office2010BlueTHContentHolder');
-        grosConteneur.style.height = "";   // to auto resize height
+        grosConteneur.style.height = ""; // to auto resize height
 
         let mesNotes = Array.from(document.querySelectorAll('[aria-describedby="grilleNotes_columnheader_3"]'));
         let notesGrp = Array.from(document.querySelectorAll('[aria-describedby="grilleNotes_columnheader_6"]'));
@@ -59,7 +65,9 @@ window.onload = () => {
             noteTotale.setAttribute("style", "background-color: white;");
         }
 
-        chrome.storage.sync.set({ [session + cours]: [rangCentileTotal.innerHTML, noteTotale.style.backgroundColor] });
+        chrome.storage.sync.set({
+            [session + cours]: [rangCentileTotal.innerHTML, noteTotale.style.backgroundColor]
+        });
         console.log(`saved:`, `${session + cours}: ${[rangCentileTotal.innerHTML, noteTotale.style.backgroundColor]}`);
 
         if (denominateurTotal !== 0) {
@@ -113,14 +121,19 @@ window.onload = () => {
         console.log(`[Interface cours]`);
         let expandButtons = Array.from(document.querySelectorAll('[mkr="expColBtn"]'));
 
-        injectCSS(/*css*/`
-        td{
-            background-color:inherit !important;
-        }
-        
-        .igtab_Office2010BlueTHContent{
-            overflow:auto!important;
-        }`);
+        chrome.storage.sync.get('noColors', function (arg) {
+            if (!arg.noColors) {
+                injectCSS( /*css*/ `
+                    td{
+                        background-color:inherit !important;
+                    }
+                    
+                    .igtab_Office2010BlueTHContent{
+                        overflow:auto!important;
+                    }`
+                );
+            }
+        });
 
         let afficherRangCentile = () => {
             let colonnesRangCentile = Array.from(document.querySelectorAll('[key="Sigle"]'));
@@ -157,7 +170,7 @@ window.onload = () => {
                             rangCentile.style.userSelect = "auto";
                             rangCentile.parentNode.setAttribute("style", `background-color: ${arg[cle][1]};`);
                         } else {
-                            if (rangCentile.style.color !== "black") rangCentile.style.color = "white";
+                            if (rangCentile.style.color !== "black") rangCentile.style.color = "transparent";
                             if (rangCentile.style.userSelect !== "auto") rangCentile.style.userSelect = "none";
                         }
                     });

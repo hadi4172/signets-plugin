@@ -2,7 +2,9 @@
 
 Une extension pour améliorer l'interface de SignETS.
 
-Code de couleur : 
+[Installer](https://chrome.google.com/webstore/detail/signets-plugin/bgbigmlncgkakhiaokjbhibkednbibpf)
+
+Code de couleur :
 
 * Vert foncé : En haut de la moyenne + Écart type
 * Vert : En haut de la moyenne
