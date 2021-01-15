@@ -49,13 +49,13 @@ window.onload = () => {
         let rangCentileTotal = document.querySelector('#ctl00_ContentPlaceHolderMain_lesOnglets_tmpl0_txtRangCentile');
 
 
-        if (Math.round(getNumber(noteTotale.innerHTML)) > Math.round(getNumber(noteGrpTotal.innerHTML))) {
+        if (Math.floor(getNumber(noteTotale.innerHTML)) > Math.round(getNumber(noteGrpTotal.innerHTML))) {
             noteTotale.setAttribute("style", "background-color: lightgreen;");
 
             if (getNumber(noteTotale.innerHTML) > getNumber(noteGrpTotal.innerHTML) + getNumber(ecartTypeTotal.innerHTML))
                 noteTotale.setAttribute("style", "background-color: limegreen;");
 
-        } else if (Math.round(getNumber(noteTotale.innerHTML)) < Math.round(getNumber(noteGrpTotal.innerHTML))) {
+        } else if (Math.ceil(getNumber(noteTotale.innerHTML)) < Math.round(getNumber(noteGrpTotal.innerHTML))) {
             noteTotale.setAttribute("style", "background-color: lightpink;");
 
             if (getNumber(noteTotale.innerHTML) + getNumber(ecartTypeTotal.innerHTML) < getNumber(noteGrpTotal.innerHTML))
@@ -87,14 +87,14 @@ window.onload = () => {
                 mesNotes[i].innerHTML = 0;
                 rangsCentiles[i].innerHTML = 0;
             }
-            if (Math.round(getNumber(mesNotes[i].innerHTML)) > Math.round(getNumber(notesGrp[i].innerHTML))) {
+            if (Math.floor(getNumber(mesNotes[i].innerHTML)) > Math.round(getNumber(notesGrp[i].innerHTML))) {
                 mesNotes[i].parentNode.setAttribute("style", "background-color: lightgreen;");
 
                 if (getNumber(mesNotes[i].innerHTML) > getNumber(notesGrp[i].innerHTML) + getNumber(ecartsTypes[i].innerHTML))
                     mesNotes[i].parentNode.setAttribute("style", "background-color: limegreen;");
 
 
-            } else if (Math.round(getNumber(mesNotes[i].innerHTML)) < Math.round(getNumber(notesGrp[i].innerHTML))) {
+            } else if (Math.ceil(getNumber(mesNotes[i].innerHTML)) < Math.round(getNumber(notesGrp[i].innerHTML))) {
                 mesNotes[i].parentNode.setAttribute("style", "background-color: lightpink;");
 
                 if (getNumber(mesNotes[i].innerHTML) + getNumber(ecartsTypes[i].innerHTML) < getNumber(notesGrp[i].innerHTML))
