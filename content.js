@@ -14,7 +14,17 @@ window.onload = () => {
                     
                     .igtab_Office2010BlueTHContent{
                         overflow:auto!important;
-                    }`
+                    }
+
+                    [aria-describedby="grilleNotes_columnheader_0"]{
+                        font-family:"Verdana";
+                        font-size:1.3em !important;
+                        letter-spacing: -0.25px;
+                        color:rgba(0,0,0,0.75);
+                        line-height: 1.4!important;
+                        font-weight:bolder;
+                    }
+                    `
                 );
             }
         });
