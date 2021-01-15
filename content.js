@@ -5,7 +5,10 @@ window.onload = () => {
         chrome.storage.sync.get('noColors', function (arg) {
             if (!arg.noColors) {
                 injectCSS( /*css*/ `
-                    td{
+                    tbody.igg_Office2010BlueItem tr td{
+                        border-right: 1px solid rgba(0,0,0,0.07);
+                        border-top: 0px solid rgba(0,0,0,0.07);
+                        border-bottom: 1px solid rgba(0,0,0,0.07);
                         background-color:inherit !important;
                     }
                     
@@ -124,7 +127,10 @@ window.onload = () => {
         chrome.storage.sync.get('noColors', function (arg) {
             if (!arg.noColors) {
                 injectCSS( /*css*/ `
-                    td{
+                    tbody.igg_Office2010BlueItem tr td{
+                        border-right: 1px solid rgba(0,0,0,0.07);
+                        border-top: 0px solid rgba(0,0,0,0.07);
+                        border-bottom: 1px solid rgba(0,0,0,0.07);
                         background-color:inherit !important;
                     }
                     
