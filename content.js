@@ -23,6 +23,12 @@ window.onload = () => {
                         color:rgba(0,0,0,0.75);
                         line-height: 1.4!important;
                         font-weight:bolder;
+
+                        width:110px!important;
+                    }
+
+                    [aria-describedby="grilleNotes_columnheader_10"]{
+                        width:78px!important;
                     }
                     `
                 );
