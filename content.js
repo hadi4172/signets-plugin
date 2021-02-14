@@ -84,17 +84,16 @@ window.onload = () => {
             noteTotale.setAttribute("style", "background-color: white;");
         }
 
-        chrome.storage.sync.set({
-            [session + cours]: [rangCentileTotal.innerHTML, noteTotale.style.backgroundColor]
-        });
-        console.log(`saved:`, `${session + cours}: ${[rangCentileTotal.innerHTML, noteTotale.style.backgroundColor]}`);
-
         if (denominateurTotal !== 0) {
-
             noteTotale.innerHTML = `${toSplit(noteTotale)} (${round2dec(valNoteTotale / denominateurTotal * 100)}%)`;
             noteGrpTotal.innerHTML = `${toSplit(noteGrpTotal)} (${round2dec(valMoyTotale / denominateurTotal * 100)}%)`;
             ecartTypeTotal.innerHTML += `&ensp;${espacement}(${round2dec(getNumber(ecartTypeTotal.innerHTML) / denominateurTotal * 100)}%)`;
             medianeTotale.innerHTML += `${espacement}(${round2dec(getNumber(medianeTotale.innerHTML) / denominateurTotal * 100)}%)`;
+
+            chrome.storage.sync.set({
+                [session + cours]: [rangCentileTotal.innerHTML, noteTotale.style.backgroundColor, `${Math.round(valNoteTotale / denominateurTotal * 100)}%`]
+            });
+            console.log(`saved:`, `${session + cours}: ${[rangCentileTotal.innerHTML, noteTotale.style.backgroundColor, `${Math.round(valNoteTotale / denominateurTotal * 100)}%`]}`);
         }
 
         for (let i = 0; i < notesGrp.length; i++) {
@@ -183,17 +182,21 @@ window.onload = () => {
             let sessions = Array.from(document.querySelectorAll('[aria-describedby="ctl00_columnheader_1"]'));
             for (let session of sessions) {
                 let rangCentilesCours = Array.from(session.parentNode.nextSibling.querySelectorAll('[aria-describedby*="_columnheader_6"]'));
-                for (let rangCentile of rangCentilesCours) {
-                    let cle = `${session.innerHTML.replace(/ /g, "")}${rangCentile.innerHTML.replace(/ /g, "")}`;
+                let noteCours = Array.from(session.parentNode.nextSibling.querySelectorAll('[aria-describedby*="_columnheader_5"]'));
+
+                for (let i = 0, length = rangCentilesCours.length; i < length; i++) {
+                    let cle = `${session.innerHTML.replace(/ /g, "")}${rangCentilesCours[i].innerHTML.replace(/ /g, "")}`;
+                    
                     chrome.storage.sync.get(cle, function (arg) {
                         if (typeof arg[cle] !== 'undefined' && !isNaN(parseInt(arg[cle]))) {
-                            rangCentile.innerHTML = arg[cle][0];
-                            rangCentile.style.color = "black";
-                            rangCentile.style.userSelect = "auto";
-                            rangCentile.parentNode.setAttribute("style", `background-color: ${arg[cle][1]};`);
+                            rangCentilesCours[i].innerHTML = arg[cle][0];
+                            rangCentilesCours[i].style.color = "black";
+                            rangCentilesCours[i].style.userSelect = "auto";
+                            rangCentilesCours[i].parentNode.setAttribute("style", `background-color: ${arg[cle][1]};`);
+                            if(noteCours[i].innerHTML === "" && arg[cle][1] !== "white" && arg[cle][2]) noteCours[i].innerHTML = arg[cle][2];
                         } else {
-                            if (rangCentile.style.color !== "black") rangCentile.style.color = "transparent";
-                            if (rangCentile.style.userSelect !== "auto") rangCentile.style.userSelect = "none";
+                            if (rangCentilesCours[i].style.color !== "black") rangCentilesCours[i].style.color = "transparent";
+                            if (rangCentilesCours[i].style.userSelect !== "auto") rangCentilesCours[i].style.userSelect = "none";
                         }
                     });
                 }
