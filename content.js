@@ -1,4 +1,7 @@
 window.onload = () => {
+    // =========================================================================
+    // Interface notes
+    // =========================================================================
     if (window.location.href.includes(`signets-ens.etsmtl.ca/Secure/DetailsCoursGroupe`)) {
         console.log(`[Interface notes]`);
 
@@ -64,6 +67,9 @@ window.onload = () => {
         let valMoyTotale = getNumber(toSplit(noteGrpTotal).split("/")[0]);
         let rangCentileTotal = document.querySelector('#ctl00_ContentPlaceHolderMain_lesOnglets_tmpl0_txtRangCentile');
 
+        let donneesGraphique = [];
+
+        document.querySelector("#ctl00_LoginViewLeftColumn_MenuVertical").innerHTML += /*html*/`</br><canvas id="myChart" width="250" height="250"></canvas><div style="font-weight:bold; text-align:right;"><a target="_blank" href="https://chrome.google.com/webstore/detail/signets-plugin/bgbigmlncgkakhiaokjbhibkednbibpf">SignETS plugin</a></div>`;
 
         if (Math.floor(getNumber(noteTotale.innerHTML)) > Math.round(getNumber(noteGrpTotal.innerHTML))) {
             noteTotale.setAttribute("style", "background-color: lightgreen;");
@@ -127,14 +133,136 @@ window.onload = () => {
 
             if (noteEstRentre) {
                 let maNoteEnPourcentage = getNumber(mesNotes[i].innerHTML) / getNumber(denominateurs[i].innerHTML) * 100;
+                let noteGrpEnPourcentage = getNumber(notesGrp[i].innerHTML) / getNumber(denominateurs[i].innerHTML) * 100;
+                let ponderation = getNumber(ponderations[i].innerHTML);
+                donneesGraphique.push([maNoteEnPourcentage, noteGrpEnPourcentage, ponderation]);
+
                 mesNotes[i].innerHTML += ` <span style="font-weight: normal;">(${Math.round(maNoteEnPourcentage)}%)</span>`;
-                notesGrp[i].innerHTML += ` <span style="font-weight: normal;">(${Math.round(getNumber(notesGrp[i].innerHTML) / getNumber(denominateurs[i].innerHTML) * 100)}%)</span>`;
+                notesGrp[i].innerHTML += ` <span style="font-weight: normal;">(${Math.round(noteGrpEnPourcentage)}%)</span>`;
                 medianes[i].innerHTML += ` <span style="font-weight: normal;">(${Math.round(getNumber(medianes[i].innerHTML) / getNumber(denominateurs[i].innerHTML) * 100)}%)</span>`;
                 ponderations[i].innerHTML += `</br>(${round2dec(getNumber(ponderations[i].innerHTML) * maNoteEnPourcentage / 100)})`;
                 ecartsTypes[i].innerHTML += ` (${Math.round(getNumber(ecartsTypes[i].innerHTML) / getNumber(denominateurs[i].innerHTML) * 100)}%)`;
             }
 
         }
+
+        console.log(`donneesGraphique:`,donneesGraphique);
+        
+        let donneesGraphiqueNotes = donneesGraphique.map((x, i) => {
+            let pourcentageNote = getSum(donneesGraphique.map(x2 => x2[2]).slice(0, i+1));
+            return {
+                y: round1dec(getSum(donneesGraphique.map(x2 => x2[0] * x2[2]).slice(0, i+1)) / pourcentageNote),
+                x: pourcentageNote
+            }
+        });
+
+        let donneesGraphiqueGroupe = donneesGraphique.map((x, i) => {
+            let pourcentageNote = getSum(donneesGraphique.map(x2 => x2[2]).slice(0, i+1));
+            return {
+                y: i !== donneesGraphique.length-1 ? round1dec(getSum(donneesGraphique.map(x2 => x2[1] * x2[2]).slice(0, i+1)) / pourcentageNote) : round1dec(valMoyTotale/denominateurTotal*100),
+                x: pourcentageNote
+            }
+        })
+
+        let data = {
+            datasets: [{
+                label: "Note",
+                fill: false,
+                showLine: true,
+                lineTension: 0.1,
+                backgroundColor: "dodgerblue",
+                borderColor: "dodgerblue", // The main line color
+                borderCapStyle: 'square',
+                borderDash: [], // try [5, 15] for instance
+                borderDashOffset: 0.0,
+                borderJoinStyle: 'miter',
+                pointBorderColor: "white",
+                // pointBackgroundColor: "white",
+                pointBorderWidth: 1,
+                pointHoverRadius: 8,
+                pointHoverBackgroundColor: "dodgerblue",
+                pointHoverBorderColor: "white",
+                pointHoverBorderWidth: 2,
+                pointRadius: 4,
+                pointHitRadius: 10,
+                // notice the gap in the data and the spanGaps: true
+                data: donneesGraphiqueNotes,
+                spanGaps: true,
+            }, {
+                label: "Groupe",
+                fill: false,
+                showLine: true,
+                lineTension: 0.1,
+                backgroundColor: "Gray",
+                borderColor: "gray",
+                borderCapStyle: 'butt',
+                borderDash: [],
+                borderDashOffset: 0.0,
+                borderJoinStyle: 'miter',
+                pointBorderColor: "white",
+                // pointBackgroundColor: "black",
+                pointBorderWidth: 1,
+                pointHoverRadius: 8,
+                pointHoverBackgroundColor: "darkgray",
+                pointHoverBorderColor: "white",
+                pointHoverBorderWidth: 2,
+                pointRadius: 4,
+                pointHitRadius: 10,
+                // notice the gap in the data and the spanGaps: false
+                data: donneesGraphiqueGroupe,
+                spanGaps: false,
+            }
+
+            ]
+        };
+
+        var options = {
+            scales: {
+                yAxes: [{
+                    ticks: {
+                        suggestedMin: 60,
+                        suggestedMax: 100
+                    },
+                    scaleLabel: {
+                        display: true,
+                        labelString: 'Évolution de votre moyenne',
+                        fontSize: 18
+                    }
+                }],
+                xAxes: [{
+                    ticks: {
+                       max: 100
+                    }
+                 }],
+            },
+            tooltips: {
+                // mode: 'index',
+                // intersect: false,
+                // itemSort: function (a, b) {
+                //     return b.datasetIndex - a.datasetIndex
+                // },
+                callbacks: {
+                    label: function (tooltipItem, data) {
+                        let index = tooltipItem.index;
+                        let datasetIndex = tooltipItem.datasetIndex;
+                        let label = data.datasets[tooltipItem.datasetIndex].label || '';
+                        let value = data.datasets[datasetIndex].data[index];
+                        label = value.x + ":  " + value.y + "%";
+                        return label;
+                    }
+                }
+            }
+        };
+
+        new Chart(document.getElementById('myChart'), {
+            type: 'scatter',
+            data: data,
+            options: options
+        });
+
+        // =====================================================================
+        // Interface cours
+        // =====================================================================
     } else if (window.location.href.includes(`https://signets-ens.etsmtl.ca/Secure/MesNotes`) || window.location.href === "https://signets-ens.etsmtl.ca/") {
         console.log(`[Interface cours]`);
         let expandButtons = Array.from(document.querySelectorAll('[mkr="expColBtn"]'));
@@ -186,14 +314,14 @@ window.onload = () => {
 
                 for (let i = 0, length = rangCentilesCours.length; i < length; i++) {
                     let cle = `${session.innerHTML.replace(/ /g, "")}${rangCentilesCours[i].innerHTML.replace(/ /g, "")}`;
-                    
+
                     chrome.storage.sync.get(cle, function (arg) {
                         if (typeof arg[cle] !== 'undefined' && !isNaN(parseInt(arg[cle]))) {
                             rangCentilesCours[i].innerHTML = arg[cle][0];
                             rangCentilesCours[i].style.color = "black";
                             rangCentilesCours[i].style.userSelect = "auto";
                             rangCentilesCours[i].parentNode.setAttribute("style", `background-color: ${arg[cle][1]};`);
-                            if(noteCours[i].innerHTML === "" && arg[cle][1] !== "white" && arg[cle][2]) noteCours[i].innerHTML = arg[cle][2];
+                            if (noteCours[i].innerHTML === "" && arg[cle][1] !== "white" && arg[cle][2]) noteCours[i].innerHTML = arg[cle][2];
                         } else {
                             if (rangCentilesCours[i].style.color !== "black") rangCentilesCours[i].style.color = "transparent";
                             if (rangCentilesCours[i].style.userSelect !== "auto") rangCentilesCours[i].style.userSelect = "none";
@@ -231,10 +359,23 @@ function round2dec(num) {
     return Math.round((num + Number.EPSILON) * 100) / 100;
 }
 
+function round1dec(num) {
+    return Math.round((num + Number.EPSILON) * 10) / 10;
+}
+
 function injectCSS(css) {
     let style = document.createElement('style');
     style.setAttribute('id', 'signets-plugin-style');
     style.type = 'text/css';
     style.appendChild(document.createTextNode(css));
     document.head.appendChild(style);
+}
+
+function getAverage(arr) {
+    if (arr.length === 0) return null;
+    return arr.reduce((p, c) => p + c, 0) / arr.length;
+}
+
+function getSum(arr) {
+    return arr.reduce((a, b) => a + b, 0);
 }
