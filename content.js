@@ -69,7 +69,19 @@ window.onload = () => {
 
         let donneesGraphique = [];
 
-        document.querySelector("#ctl00_LoginViewLeftColumn_MenuVertical").innerHTML += /*html*/`</br><canvas id="myChart" width="250" height="250"></canvas><div style="font-weight:bold; text-align:right;"><a target="_blank" href="https://chrome.google.com/webstore/detail/signets-plugin/bgbigmlncgkakhiaokjbhibkednbibpf">SignETS plugin</a></div>`;
+        document.querySelector("#ctl00_LoginViewLeftColumn_MenuVertical").innerHTML += /*html*/`
+        </br>
+        <canvas id="myChart" width="250" height="250"></canvas>
+        </br>
+        <div style="font-weight:bold; text-align:right; border-top: 1px solid #bbb;">
+          </br>
+          <a style="color:#4F7795;" 
+             title="Si vous avez aimé mon extension, n'hésitez pas à aller mettre une étoile et partager avec vos amis :)" 
+             target="_blank" 
+             href="https://chrome.google.com/webstore/detail/signets-plugin/bgbigmlncgkakhiaokjbhibkednbibpf">
+               SIGNETS plugin
+               </a>
+        </div>`;
 
         if (Math.floor(getNumber(noteTotale.innerHTML)) > Math.round(getNumber(noteGrpTotal.innerHTML))) {
             noteTotale.setAttribute("style", "background-color: lightgreen;");
@@ -152,7 +164,7 @@ window.onload = () => {
             let pourcentageNote = getSum(donneesGraphique.map(x2 => x2[2]).slice(0, i+1));
             return {
                 y: round1dec(getSum(donneesGraphique.map(x2 => x2[0] * x2[2]).slice(0, i+1)) / pourcentageNote),
-                x: pourcentageNote
+                x: Math.round(pourcentageNote)
             }
         });
 
@@ -160,18 +172,18 @@ window.onload = () => {
             let pourcentageNote = getSum(donneesGraphique.map(x2 => x2[2]).slice(0, i+1));
             return {
                 y: i !== donneesGraphique.length-1 ? round1dec(getSum(donneesGraphique.map(x2 => x2[1] * x2[2]).slice(0, i+1)) / pourcentageNote) : round1dec(valMoyTotale/denominateurTotal*100),
-                x: pourcentageNote
+                x: Math.round(pourcentageNote)
             }
         })
 
         let data = {
             datasets: [{
-                label: "Note",
+                label: "Votre moyenne",
                 fill: false,
                 showLine: true,
                 lineTension: 0.1,
-                backgroundColor: "dodgerblue",
-                borderColor: "dodgerblue", // The main line color
+                backgroundColor: "#4F7795",
+                borderColor: "#4F7795", // The main line color
                 borderCapStyle: 'square',
                 borderDash: [], // try [5, 15] for instance
                 borderDashOffset: 0.0,
@@ -179,17 +191,17 @@ window.onload = () => {
                 pointBorderColor: "white",
                 // pointBackgroundColor: "white",
                 pointBorderWidth: 1,
-                pointHoverRadius: 8,
-                pointHoverBackgroundColor: "dodgerblue",
+                pointHoverRadius: 5,
+                pointHoverBackgroundColor: "#4F7795",
                 pointHoverBorderColor: "white",
-                pointHoverBorderWidth: 2,
-                pointRadius: 4,
+                pointHoverBorderWidth: 1.5,
+                pointRadius: 3,
                 pointHitRadius: 10,
                 // notice the gap in the data and the spanGaps: true
                 data: donneesGraphiqueNotes,
                 spanGaps: true,
             }, {
-                label: "Groupe",
+                label: "Moy. du groupe",
                 fill: false,
                 showLine: true,
                 lineTension: 0.1,
@@ -202,11 +214,11 @@ window.onload = () => {
                 pointBorderColor: "white",
                 // pointBackgroundColor: "black",
                 pointBorderWidth: 1,
-                pointHoverRadius: 8,
+                pointHoverRadius: 5,
                 pointHoverBackgroundColor: "darkgray",
                 pointHoverBorderColor: "white",
-                pointHoverBorderWidth: 2,
-                pointRadius: 4,
+                pointHoverBorderWidth: 1.5,
+                pointRadius: 3,
                 pointHitRadius: 10,
                 // notice the gap in the data and the spanGaps: false
                 data: donneesGraphiqueGroupe,
@@ -225,22 +237,27 @@ window.onload = () => {
                     },
                     scaleLabel: {
                         display: true,
-                        labelString: 'Évolution de votre moyenne',
-                        fontSize: 18
+                        labelString: 'Moyenne en %',
+                        fontSize: 15
                     }
                 }],
                 xAxes: [{
                     ticks: {
                        max: 100
+                    },
+                    scaleLabel: {
+                        display: true,
+                        labelString: 'Pourcentage cumulé de la note finale',
+                        fontSize: 11.5
                     }
                  }],
             },
             tooltips: {
-                // mode: 'index',
-                // intersect: false,
-                // itemSort: function (a, b) {
-                //     return b.datasetIndex - a.datasetIndex
-                // },
+                mode: 'index',
+                intersect: false,
+                itemSort: function (a, b) {
+                    return b.datasetIndex - a.datasetIndex
+                },
                 callbacks: {
                     label: function (tooltipItem, data) {
                         let index = tooltipItem.index;
