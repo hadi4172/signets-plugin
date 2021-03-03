@@ -80,7 +80,7 @@ window.onload = () => {
              target="_blank" 
              href="https://chrome.google.com/webstore/detail/signets-plugin/bgbigmlncgkakhiaokjbhibkednbibpf">
                SIGNETS plugin
-               </a>
+          </a>
         </div>`;
 
         if (Math.floor(getNumber(noteTotale.innerHTML)) > Math.round(getNumber(noteGrpTotal.innerHTML))) {
@@ -149,10 +149,10 @@ window.onload = () => {
                 let ponderation = getNumber(ponderations[i].innerHTML);
                 donneesGraphique.push([maNoteEnPourcentage, noteGrpEnPourcentage, ponderation]);
 
-                mesNotes[i].innerHTML += ` <span style="font-weight: normal;">(${Math.round(maNoteEnPourcentage)}%)</span>`;
-                notesGrp[i].innerHTML += ` <span style="font-weight: normal;">(${Math.round(noteGrpEnPourcentage)}%)</span>`;
-                medianes[i].innerHTML += ` <span style="font-weight: normal;">(${Math.round(getNumber(medianes[i].innerHTML) / getNumber(denominateurs[i].innerHTML) * 100)}%)</span>`;
-                ponderations[i].innerHTML += `</br>(${round2dec(getNumber(ponderations[i].innerHTML) * maNoteEnPourcentage / 100)})`;
+                mesNotes[i].innerHTML += /*html*/` <span style="font-weight: normal;">(${Math.round(maNoteEnPourcentage)}%)</span>`;
+                notesGrp[i].innerHTML += /*html*/` <span style="font-weight: normal;">(${Math.round(noteGrpEnPourcentage)}%)</span>`;
+                medianes[i].innerHTML += /*html*/` <span style="font-weight: normal;">(${Math.round(getNumber(medianes[i].innerHTML) / getNumber(denominateurs[i].innerHTML) * 100)}%)</span>`;
+                ponderations[i].innerHTML += /*html*/`</br>(${round2dec(getNumber(ponderations[i].innerHTML) * maNoteEnPourcentage / 100)})`;
                 ecartsTypes[i].innerHTML += ` (${Math.round(getNumber(ecartsTypes[i].innerHTML) / getNumber(denominateurs[i].innerHTML) * 100)}%)`;
             }
 
@@ -164,7 +164,7 @@ window.onload = () => {
             let pourcentageNote = getSum(donneesGraphique.map(x2 => x2[2]).slice(0, i+1));
             return {
                 y: round1dec(getSum(donneesGraphique.map(x2 => x2[0] * x2[2]).slice(0, i+1)) / pourcentageNote),
-                x: Math.round(pourcentageNote)
+                x: round1dec(pourcentageNote)
             }
         });
 
@@ -172,7 +172,7 @@ window.onload = () => {
             let pourcentageNote = getSum(donneesGraphique.map(x2 => x2[2]).slice(0, i+1));
             return {
                 y: i !== donneesGraphique.length-1 ? round1dec(getSum(donneesGraphique.map(x2 => x2[1] * x2[2]).slice(0, i+1)) / pourcentageNote) : round1dec(valMoyTotale/denominateurTotal*100),
-                x: Math.round(pourcentageNote)
+                x: round1dec(pourcentageNote)
             }
         })
 
@@ -254,18 +254,17 @@ window.onload = () => {
             },
             tooltips: {
                 mode: 'index',
-                intersect: false,
+                intersect: true,
                 itemSort: function (a, b) {
-                    return b.datasetIndex - a.datasetIndex
+                    return b.yLabel - a.yLabel
                 },
                 callbacks: {
                     label: function (tooltipItem, data) {
                         let index = tooltipItem.index;
                         let datasetIndex = tooltipItem.datasetIndex;
-                        let label = data.datasets[tooltipItem.datasetIndex].label || '';
+                        // let label = data.datasets[tooltipItem.datasetIndex].label || '';
                         let value = data.datasets[datasetIndex].data[index];
-                        label = value.x + ":  " + value.y + "%";
-                        return label;
+                        return value.y + "%";
                     }
                 }
             }
