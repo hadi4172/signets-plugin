@@ -343,6 +343,7 @@ window.onload = () => {
                             if (rangCentilesCours[i].style.userSelect !== "auto") rangCentilesCours[i].style.userSelect = "none";
                         }
                     });
+                    if (noteCours[i].innerHTML === "K") noteCours[i].parentNode.setAttribute("style", `background-color: lightblue;`); 
                 }
             }
         }
