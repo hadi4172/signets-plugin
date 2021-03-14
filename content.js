@@ -292,6 +292,10 @@ window.onload = () => {
                         border-bottom: 1px solid rgba(0,0,0,0.07);
                         background-color:inherit !important;
                     }
+
+                    [aria-describedby*="_columnheader_6"]{
+                        text-align: center !important;
+                    }
                     
                     .igtab_Office2010BlueTHContent{
                         overflow:auto!important;
