@@ -1,7 +1,7 @@
 {
 	"name": "SignETS plugin",
 	"manifest_version": 2,
-	"version": "0.1.14",
+	"version": "0.2.0",
 	"description": "Une extension pour améliorer l'interface de SignETS",
 	"icons": {
 		"128": "assets/icon128.png",
@@ -15,9 +15,14 @@
 	"content_scripts": [{
 		"matches": ["*://signets-ens.etsmtl.ca/*"],
 		"css": [
+			"tippyjs/scale.css",
+			"tippyjs/light.css",
+			"tippyjs/light-border.css",
 			"chartjs/Chart.min.css"
 		],
 		"js": [
+			"tippyjs/popper.min.js",
+			"tippyjs/tippy-bundle.umd.min.js",
 			"chartjs/Chart.min.js",
 			"content.js"
 		]

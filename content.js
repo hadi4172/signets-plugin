@@ -109,9 +109,13 @@ window.onload = () => {
             medianeTotale.innerHTML += `${espacement}(${round2dec(getNumber(medianeTotale.innerHTML) / denominateurTotal * 100)}%)`;
 
             chrome.storage.sync.set({
-                [session + cours]: [rangCentileTotal.innerHTML, noteTotale.style.backgroundColor, `${Math.round(valNoteTotale / denominateurTotal * 100)}%`]
+                [session + cours]: [
+                    rangCentileTotal.innerHTML,
+                    noteTotale.style.backgroundColor,
+                    round1dec(valNoteTotale / denominateurTotal * 100),
+                    round1dec(valMoyTotale / denominateurTotal * 100)]
             });
-            console.log(`saved:`, `${session + cours}: ${[rangCentileTotal.innerHTML, noteTotale.style.backgroundColor, `${Math.round(valNoteTotale / denominateurTotal * 100)}%`]}`);
+            // console.log(`saved:`, `${session + cours}: ${[rangCentileTotal.innerHTML, noteTotale.style.backgroundColor, `${Math.round(valNoteTotale / denominateurTotal * 100)}%`]}`);
         }
 
         for (let i = 0; i < notesGrp.length; i++) {
@@ -158,20 +162,20 @@ window.onload = () => {
 
         }
 
-        console.log(`donneesGraphique:`,donneesGraphique);
-        
+        console.log(`donneesGraphique:`, donneesGraphique);
+
         let donneesGraphiqueNotes = donneesGraphique.map((x, i) => {
-            let pourcentageNote = getSum(donneesGraphique.map(x2 => x2[2]).slice(0, i+1));
+            let pourcentageNote = getSum(donneesGraphique.map(x2 => x2[2]).slice(0, i + 1));
             return {
-                y: round1dec(getSum(donneesGraphique.map(x2 => x2[0] * x2[2]).slice(0, i+1)) / pourcentageNote),
+                y: round1dec(getSum(donneesGraphique.map(x2 => x2[0] * x2[2]).slice(0, i + 1)) / pourcentageNote),
                 x: round1dec(pourcentageNote)
             }
         });
 
         let donneesGraphiqueGroupe = donneesGraphique.map((x, i) => {
-            let pourcentageNote = getSum(donneesGraphique.map(x2 => x2[2]).slice(0, i+1));
+            let pourcentageNote = getSum(donneesGraphique.map(x2 => x2[2]).slice(0, i + 1));
             return {
-                y: i !== donneesGraphique.length-1 ? round1dec(getSum(donneesGraphique.map(x2 => x2[1] * x2[2]).slice(0, i+1)) / pourcentageNote) : round1dec(valMoyTotale/denominateurTotal*100),
+                y: i !== donneesGraphique.length - 1 ? round1dec(getSum(donneesGraphique.map(x2 => x2[1] * x2[2]).slice(0, i + 1)) / pourcentageNote) : round1dec(valMoyTotale / denominateurTotal * 100),
                 x: round1dec(pourcentageNote)
             }
         })
@@ -243,14 +247,14 @@ window.onload = () => {
                 }],
                 xAxes: [{
                     ticks: {
-                       max: 100
+                        max: 100
                     },
                     scaleLabel: {
                         display: true,
                         labelString: 'Pourcentage cumulé de la note finale',
                         fontSize: 11.5
                     }
-                 }],
+                }],
             },
             tooltips: {
                 mode: 'index',
@@ -280,10 +284,12 @@ window.onload = () => {
         // Interface cours
         // =====================================================================
     } else if (window.location.href.includes(`https://signets-ens.etsmtl.ca/Secure/MesNotes`) || window.location.href === "https://signets-ens.etsmtl.ca/") {
-        console.log(`[Interface cours]`);
+        console.log(`[Interface cours] hel`);
+
         let expandButtons = Array.from(document.querySelectorAll('[mkr="expColBtn"]'));
 
         chrome.storage.sync.get('noColors', function (arg) {
+
             if (!arg.noColors) {
                 injectCSS( /*css*/ `
                     tbody.igg_Office2010BlueItem tr td{
@@ -301,10 +307,37 @@ window.onload = () => {
                         overflow:auto!important;
                     }`
                 );
+            } else {
+                let injectBorderToResize = injectCSS( /*css*/ ` tbody.igg_Office2010BlueItem tr td{ border-right: 1px solid #bccadf; } `);
+                setTimeout(() => {
+                    document.head.removeChild(injectBorderToResize);
+                    injectCSS( /*css*/ `
+                    [aria-describedby*="_columnheader_6"]{
+                        text-align: center !important;
+                    }
+                    .igtab_Office2010BlueTHContent{
+                        overflow:auto!important;
+                    }
+                    `);
+                }, 50);
             }
         });
 
+        tippy.setDefaultProps(
+            {
+                allowHTML: true,
+                animateFill: true,
+                animation: 'scale',
+                interactive: true,
+                interactiveBorder: 10,
+                placement: 'left',
+                theme: 'light-border'
+            }
+        );
+        let sessionsAvecGraphiqueActive = [];
+
         let afficherRangCentile = () => {
+            console.log(`Affiché rang centile`);
             let colonnesRangCentile = Array.from(document.querySelectorAll('[key="Sigle"]'));
 
             for (let colonneRCentile of colonnesRangCentile) {
@@ -328,12 +361,19 @@ window.onload = () => {
             }
 
             let sessions = Array.from(document.querySelectorAll('[aria-describedby="ctl00_columnheader_1"]'));
+
             for (let session of sessions) {
                 let rangCentilesCours = Array.from(session.parentNode.nextSibling.querySelectorAll('[aria-describedby*="_columnheader_6"]'));
                 let noteCours = Array.from(session.parentNode.nextSibling.querySelectorAll('[aria-describedby*="_columnheader_5"]'));
+                let siglesCours = Array.from(session.parentNode.nextSibling.querySelectorAll('[aria-describedby*="_columnheader_2"]')).map(x => x.textContent.split("-")[0]);
+
+                let donneesGraphique = [];  //structure : [[sigle,note,moyenne],[sigle,note,moyenne],...]
 
                 for (let i = 0, length = rangCentilesCours.length; i < length; i++) {
-                    let cle = `${session.innerHTML.replace(/ /g, "")}${rangCentilesCours[i].innerHTML.replace(/ /g, "")}`;
+
+                    if (noteCours[i].innerHTML === "K") noteCours[i].parentNode.setAttribute("style", `background-color: lightblue;`);
+
+                    let cle = `${session.innerHTML.replace(/ /g, "")}${siglesCours[i]}`;
 
                     chrome.storage.sync.get(cle, function (arg) {
                         if (typeof arg[cle] !== 'undefined' && !isNaN(parseInt(arg[cle]))) {
@@ -341,30 +381,91 @@ window.onload = () => {
                             rangCentilesCours[i].style.color = "black";
                             rangCentilesCours[i].style.userSelect = "auto";
                             rangCentilesCours[i].parentNode.setAttribute("style", `background-color: ${arg[cle][1]};`);
-                            if (noteCours[i].innerHTML === "" && arg[cle][1] !== "white" && arg[cle][2]) noteCours[i].innerHTML = arg[cle][2];
+                            if (noteCours[i].innerHTML === "" && arg[cle][1] !== "white" && arg[cle][2]) noteCours[i].innerHTML = typeof arg[cle][2] === "string" ? arg[cle][2] : `${arg[cle][2]}%`;
+
+                            donneesGraphique.push([siglesCours[i], typeof arg[cle][2] === "string" ? parseInt(arg[cle][2]) : arg[cle][2], typeof arg[cle][3] !== 'undefined' ? arg[cle][3] : 0]);
                         } else {
                             if (rangCentilesCours[i].style.color !== "black") rangCentilesCours[i].style.color = "transparent";
                             if (rangCentilesCours[i].style.userSelect !== "auto") rangCentilesCours[i].style.userSelect = "none";
+
+                            donneesGraphique.push([siglesCours[i], 0, 0]);
+                        }
+
+                        if (donneesGraphique.some(x => x[1] !== 0 || x[2] !== 0) && !sessionsAvecGraphiqueActive.includes(cle) && i == length -1) {
+                            console.log(`Entre graphique`);
+                            let graphique = document.createElement('canvas');
+                            graphique.width = "239px";
+                            graphique.height = "239px";
+                            graphique.style = "display: block; width: 239px; height: 239px;";
+
+                            let data = {
+                                labels: donneesGraphique.map(x => x[0]),
+                                datasets: [
+                                    {
+                                        label: "Votre moyenne",
+                                        backgroundColor: "#4F7795",
+                                        data: donneesGraphique.map(x => x[1])
+                                    },
+                                    {
+                                        label: "Moy. du groupe",
+                                        backgroundColor: "gray",
+                                        data: donneesGraphique.map(x => x[2])
+                                    }
+                                ]
+                            };
+
+                            new Chart(graphique, {
+                                type: 'bar',
+                                data: data,
+                                options: {
+                                    scales: {
+                                        yAxes: [{
+                                            ticks: {
+                                                suggestedMin: 50,
+                                                suggestedMax: 100
+                                            }
+                                        }]
+                                    }, 
+                                    tooltips: {
+                                        mode: 'index',
+                                        intersect: true,
+                                        itemSort: function (a, b) {
+                                            return b.yLabel - a.yLabel
+                                        },
+                                        callbacks: {
+                                            label: function (tooltipItem, data) {
+                                                let index = tooltipItem.index;
+                                                let datasetIndex = tooltipItem.datasetIndex;
+                                                let label = data.datasets[tooltipItem.datasetIndex].label || '';
+                                                let value = data.datasets[datasetIndex].data[index];
+                                                return /* label + " : " +  */value + "%";
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+
+                            tippy(session.parentNode.nextSibling, {
+                                content: graphique,
+                            });
+                            sessionsAvecGraphiqueActive.push(cle);
                         }
                     });
-                    if (noteCours[i].innerHTML === "K") noteCours[i].parentNode.setAttribute("style", `background-color: lightblue;`); 
                 }
+
             }
         }
 
         afficherRangCentile();
 
-        for (let expandButton of expandButtons) {
-            setTimeout(() => {
-                if (expandButton.getAttribute("alt") === "Expand Row") expandButton.click();
-            }, 100);
 
-            expandButton.addEventListener("click", function () {
-                setTimeout(() => {
-                    afficherRangCentile();
-                }, 50);
-            });
-        }
+        setTimeout(() => {
+            for (let expandButton of expandButtons) {
+                if (expandButton.getAttribute("alt") === "Expand Row") expandButton.click();
+            }
+            afficherRangCentile();
+        }, 100);
+
     }
 };
 
@@ -390,11 +491,7 @@ function injectCSS(css) {
     style.type = 'text/css';
     style.appendChild(document.createTextNode(css));
     document.head.appendChild(style);
-}
-
-function getAverage(arr) {
-    if (arr.length === 0) return null;
-    return arr.reduce((p, c) => p + c, 0) / arr.length;
+    return style;
 }
 
 function getSum(arr) {
