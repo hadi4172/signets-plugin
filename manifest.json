@@ -1,7 +1,7 @@
 {
 	"name": "SignETS plugin",
 	"manifest_version": 2,
-	"version": "0.2.0",
+	"version": "0.2.5",
 	"description": "Une extension pour améliorer l'interface de SignETS",
 	"icons": {
 		"128": "assets/icon128.png",
@@ -26,7 +26,16 @@
 			"chartjs/Chart.min.js",
 			"content.js"
 		]
+	},{
+		"matches": ["*://signets-ens.etsmtl.ca/*"],
+		"js": [
+			"changeTheme.js"
+		],
+		"run_at": "document_start"
 	}],
+	"web_accessible_resources": [
+		"assets/pavillonE.jpg"
+	  ],
 	"permissions": [
 		"storage"
 	]
