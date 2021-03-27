@@ -81,7 +81,7 @@ window.onload = () => {
 
         document.querySelector("#ctl00_LoginViewLeftColumn_MenuVertical").innerHTML += /*html*/`
         </br>
-        <canvas id="myChart" width="250" height="250"></canvas>
+        <canvas id="myChart" width="250" height="290"></canvas>
         </br>
         <div style="font-weight:bold; text-align:right; border-top: 1px solid #bbb;">
           </br>
@@ -173,7 +173,7 @@ window.onload = () => {
 
         }
 
-        console.log(`donneesGraphique:`, donneesGraphique);
+        // console.log(`donneesGraphique:`, donneesGraphique);
 
         let donneesGraphiqueNotes = donneesGraphique.map((x, i) => {
             let pourcentageNote = getSum(donneesGraphique.map(x2 => x2[2]).slice(0, i + 1));
@@ -254,12 +254,14 @@ window.onload = () => {
                         scaleLabel: {
                             display: true,
                             labelString: 'Moyenne en %',
-                            fontSize: 11.5
+                            fontSize: 12
                         }
                     }],
                     xAxes: [{
                         ticks: {
-                            max: 100
+                            min: 0,
+                            max: 100,
+                            stepSize: 20,
                         },
                         scaleLabel: {
                             display: true,
@@ -275,6 +277,9 @@ window.onload = () => {
                         return b.yLabel - a.yLabel
                     },
                     callbacks: {
+                        title: function(tooltipItems, data) {
+                            return round1dec(data.datasets[tooltipItems[0].datasetIndex].data[tooltipItems[0].index].x) + "%";
+                        },
                         label: function (tooltipItem, data) {
                             let index = tooltipItem.index;
                             let datasetIndex = tooltipItem.datasetIndex;
@@ -283,6 +288,12 @@ window.onload = () => {
                             return value.y + "%";
                         }
                     }
+                },
+                title: {
+                    display: true,
+                    padding: 3,
+                    fontSize: 16,
+                    text: 'Évolution de votre moyenne'
                 }
             };
 
@@ -294,7 +305,7 @@ window.onload = () => {
 
             document.querySelector('#linksignetsplugin').setAttribute("style", `color:${theme === "default-theme" ? "#4F7795" : "#B90E1C"};text-decoration: none;`);
         });
-        
+
         //Régler un bug que les développeurs de SIGNETS ont laissé
         let menusDeroulants = Array.from(document.querySelectorAll('.AspNet-Menu-WithChildren.CMSListMenuLI'));
 
@@ -371,7 +382,7 @@ window.onload = () => {
         let sessionsAvecGraphiqueActive = [];
 
         let afficherRangCentile = () => {
-            console.log(`Affiché rang centile`);
+            // console.log(`Affiché rang centile`);
             let colonnesRangCentile = Array.from(document.querySelectorAll('[key="Sigle"]'));
 
             for (let colonneRCentile of colonnesRangCentile) {
@@ -433,7 +444,7 @@ window.onload = () => {
                         }
 
                         if (donneesGraphique.some(x => x[1] !== 0 || x[2] !== 0) && !sessionsAvecGraphiqueActive.includes(cle) && i == length - 1) {
-                            console.log(`Entre graphique`);
+                            // console.log(`Entre graphique`);
                             let graphique = document.createElement('canvas');
                             graphique.width = "239px";
                             graphique.height = "239px";
