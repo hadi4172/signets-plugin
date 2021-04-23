@@ -21,7 +21,7 @@ chrome.storage.sync.get('theme', function (arg) {
 
 function injectCSS(css) {
     let style = document.createElement('style');
-    style.setAttribute('id', 'signets-plugin-style');
+    style.setAttribute('class', 'signets-plugin-style');
     style.type = 'text/css';
     style.appendChild(document.createTextNode(css));
     document.head.appendChild(style);
