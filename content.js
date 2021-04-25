@@ -73,25 +73,23 @@ function obtenirSommaireCours(link, asynchrone = false, callback = () => { }) {
         let ecartType = getNumber(reformatterNote(getSubstringBetween(resultatRequete, `"ctl00_ContentPlaceHolderMain_lesOnglets_tmpl0_txtEcartType">`, `</span>`)).split("/")[0]);
         let maximum = getNumber(reformatterNote(getSubstringBetween(resultatRequete, `"ctl00_ContentPlaceHolderMain_lesOnglets_tmpl0_txtTotal1">`, `&nbsp;&nbsp;</span>`)).split("/")[1]);
         let rangCentile = getSubstringBetween(resultatRequete, `"ctl00_ContentPlaceHolderMain_lesOnglets_tmpl0_txtRangCentile">`, `</span>`);
+        let coteFinale = getSubstringBetween(resultatRequete, `"ctl00_ContentPlaceHolderMain_lesOnglets_tmpl0_txtCoteFinale">`, `</span>`);
 
         let color = getColor(note, moyenne, ecartType, maximum !== 0)
 
-        return [round1dec(toPercentage(note, maximum)), round1dec(toPercentage(moyenne, maximum)), rangCentile, color, maximum];
+        return [round1dec(toPercentage(note, maximum)), round1dec(toPercentage(moyenne, maximum)), rangCentile, color, maximum, coteFinale];
     }
 
     if (!asynchrone) {
         resultatRequete = getSubstringBetween(getSourceFromLink(link), `Sommaire du cours-groupe`, `Cote au dossier`);
-        if (resultatRequete === "Error") return [NaN, NaN, "&nbsp;", "white", NaN];
+        if (resultatRequete === "Error") return [NaN, NaN, "&nbsp;", "white", NaN, ""];
         return decomposerResultat(resultatRequete);
     } else {
-        (async () => {
-            let response = await fetch(link);
-            if (response.status == 200) {
-                let resultatRequete = getSubstringBetween(await response.text(), `Sommaire du cours-groupe`, `Cote au dossier`);
-                if (resultatRequete !== "Error") callback(decomposerResultat(resultatRequete));
-                else callback([NaN, NaN, "&nbsp;", "white", NaN]);
-            }
-        })();
+        getSourceFromLinkAsync(link, (resultText) => {
+            let resultatRequete = getSubstringBetween(resultText, `Sommaire du cours-groupe`, `Cote au dossier`);
+            if (resultatRequete !== "Error") callback(decomposerResultat(resultatRequete));
+            else callback([NaN, NaN, "&nbsp;", "white", NaN, ""]);
+        });
     }
 
 }
@@ -106,6 +104,132 @@ function getSourceFromLink(link) {
     } else {
         return "Error";
     }
+}
+
+async function getSourceFromLinkAsync(link, callback) {
+    let response = await fetch(link);
+    if (response.status == 200) {
+        callback(await response.text());
+    }
+}
+
+function fetchInformationsCheminement() {
+
+    //première requête GET pour obtenir les informations sur le cheminement pour un seul programme 
+    //ou pour obtenir les arguments nécessaires pour lancer une requête POST et chercher les informations des autres programmes
+    getSourceFromLinkAsync("https://signets-ens.etsmtl.ca/Secure/DocEvolutionMoyenne.aspx", (resultatRequete) => {
+        console.log(`[Signets Plugin] Mise à jour des informations sur le GPA`);
+
+        let etatProgrammes = [];
+
+        const formatterDonneesCheminement = donnees => {
+            return donnees.split(/(?<=,[0-9]{2})|(?<=SessionCréditsMoyenne)/).map(e => {
+                if (/[0-9]{1,2}[AHE]{1}/.test(e)) {
+                    let posSession = e.search(/[AHE]/);
+                    return (e.substring(posSession, posSession + 3) + " "
+                        + e.substring(posSession + 3, e.indexOf(",") - 1) + " "
+                        + e.substring(e.indexOf(",") - 1));
+                } else if (/^[0-9]{4} /.test(e)) {
+                    e = e.replace(/:.*:/g, "");
+                    return (e.substring(0, e.indexOf(" "))
+                        + "|" + e.substring(e.indexOf(" ") + 1, e.lastIndexOf(" "))
+                        + "|" + e.substring(e.lastIndexOf(" ") + 1));
+                } else return e;
+            });
+        };
+
+        const ajouterInformationsCheminement = (data, indexProgramme) => {
+            for (let line of data) {
+                if (line.split("|").length === 3) {
+                    let splittedLine = line.split("|");
+
+                    if (!etatProgrammes.some(p => p.code === parseInt(splittedLine[0]))) {
+                        etatProgrammes.push({
+                            nom: splittedLine[1],
+                            code: parseInt(splittedLine[0]),
+                            moyennecumulative: getNumber(splittedLine[2]),
+                            sessions: []
+                        });
+                    }
+
+                } else if (line.split(" ").length === 3) {
+                    let splittedLine = line.split(" ");
+
+                    if (!etatProgrammes[indexProgramme].sessions.some(s => s.id === splittedLine[0])) {
+
+                        etatProgrammes[indexProgramme].sessions.push({
+                            id: splittedLine[0],
+                            credits: parseInt(splittedLine[1]),
+                            moyenne: getNumber(splittedLine[2])
+                        })
+                    }
+                }
+            }
+        };
+
+        resultatRequete = minifyHTML(resultatRequete);
+
+        let stringVerificationPlusieursProgrammes =
+            formatterDonneesCheminement(
+                stripHTML(
+                    getSubstringBetween(
+                        resultatRequete,
+                        `<strong>Choisissez le programme d'études dans liste ci-dessous:`,
+                        `<div id="ctl00_ContentPlaceHolderMain_gridSessions_eppool"`
+                    )
+                )
+            );
+
+        let lignesDeProgrammes = stringVerificationPlusieursProgrammes.filter(e => e.includes("|"));
+        let ilYaPlusieursProgrammes = stringVerificationPlusieursProgrammes.length > 1;
+
+        if (!ilYaPlusieursProgrammes) {
+            ajouterInformationsCheminement(stringVerificationPlusieursProgrammes, 0);
+            // console.log(JSON.stringify(etatProgrammes, null, 2));
+            chrome.storage.sync.set({ etatProgrammes: etatProgrammes });
+
+        } else {
+            // il faut chercher l'information de tous les programmes
+            let codesDeProgrammes = lignesDeProgrammes.map(l => l.split("|")[0]);
+
+            //il faut envoyer une requête POST avec des arguments bien définis pour accéder aux données d'anciens programmes
+            let viewState = encodeURIComponent(getSubstringBetween(resultatRequete, `id="__VIEWSTATE" value="`, `" />`));
+            let viewStateGenerator = encodeURIComponent(getSubstringBetween(resultatRequete, `id="__VIEWSTATEGENERATOR" value="`, `" />`));
+            let eventValidation = encodeURIComponent(getSubstringBetween(resultatRequete, `id="__EVENTVALIDATION" value="`, `" />`));
+
+            for (let i = 0, length = codesDeProgrammes.length; i < length; i++) {
+
+                let data = `ctl00$ContentPlaceHolderMain$lisPgm=${codesDeProgrammes[i]}`
+                    + `&__EVENTTARGET=ctl00$ContentPlaceHolderMain$lisPgm`
+                    + `&__VIEWSTATE=${viewState}`
+                    + `&__VIEWSTATEGENERATOR=${viewStateGenerator}`
+                    + `&__EVENTVALIDATION=${eventValidation}`;
+
+                let xhr = new XMLHttpRequest();
+                xhr.open('POST', 'https://signets-ens.etsmtl.ca/Secure/DocEvolutionMoyenne.aspx', true);
+                xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+                xhr.onload = function () {
+                    // do something to response
+
+                    ajouterInformationsCheminement(
+                        formatterDonneesCheminement(
+                            stripHTML(
+                                getSubstringBetween(
+                                    minifyHTML(xhr.responseText),
+                                    `<strong>Choisissez le programme d'études dans liste ci-dessous:`,
+                                    `<div id="ctl00_ContentPlaceHolderMain_gridSessions_eppool"`
+                                )
+                            )
+                        ), i
+                    );
+
+                    // console.log(JSON.stringify(etatProgrammes, null, 2));
+                    chrome.storage.sync.set({ etatProgrammes: etatProgrammes });
+                };
+                xhr.send(data);
+            }
+        }
+    });
 }
 
 function minifyHTML(string) { return string.replace(/^\s+|\r\n|\n|\r|(>)\s+(<)|\s+$/gm, '$1$2'); }
@@ -207,6 +331,8 @@ function gererPageCours() {
 
         let sessions = Array.from(document.querySelectorAll('[aria-describedby="ctl00_columnheader_1"]'));
 
+        let uneCoteDeCoursAChange = false;
+
         for (let session of sessions) {
             let rangCentilesCours = Array.from(session.parentNode.nextSibling.querySelectorAll('[aria-describedby*="_columnheader_6"]'));
             let noteCours = Array.from(session.parentNode.nextSibling.querySelectorAll('[aria-describedby*="_columnheader_5"]'));
@@ -221,7 +347,7 @@ function gererPageCours() {
 
                 let cle = `${session.innerHTML.replace(/ /g, "")}${siglesCours[i]}`;
 
-                chrome.storage.sync.get([cle, 'theme', 'showGrades', 'preciseGrades'], function (arg) {
+                chrome.storage.sync.get([cle, 'theme', 'showGrades', 'preciseGrades', 'etatProgrammes'], function (arg) {
                     let theme = "default-theme";
                     if (typeof arg.theme !== 'undefined') {
                         theme = arg.theme;
@@ -234,10 +360,14 @@ function gererPageCours() {
                         rangCentilesCours[i].parentNode.setAttribute("style", `background-color: ${color};`);
 
                         noteCours[i].style.whiteSpace = "nowrap";
-                        
+
                         if (noteCours[i].innerHTML === "" && color !== "white" && note) noteCours[i].innerHTML = arg.preciseGrades === true ?
                             `${note}%×${denominator}`
                             : `${note}%`;
+
+                        if (/%|\//g.test(noteCours[i].innerHTML) && `${note}%` !== noteCours[i].innerHTML.split(" | ")[1]) {
+                            noteCours[i].innerHTML = noteCours[i].innerHTML.split(" | ")[0];
+                        }
 
                         if (typeof arg.showGrades !== 'undefined' && arg.showGrades === true && noteCours[i].innerHTML !== "" && !/%|\//g.test(noteCours[i].innerHTML)) {
                             noteCours[i].innerHTML += ` | ${note}%`;
@@ -245,17 +375,28 @@ function gererPageCours() {
                         donneesGraphique.push([siglesCours[i], note, moyenne ? moyenne : 0]);
                     }
 
+                    if (typeof arg.etatProgrammes === 'undefined') {
+                        fetchInformationsCheminement();
+                    }/*  else if(session === sessions[0] && i === 0 && secondRun){
+                        console.log(JSON.stringify(arg.etatProgrammes, null, 2));
+                    } */
+
                     if (typeof arg[cle] !== 'undefined' && !isNaN(parseInt(arg[cle][2]))) {
+
+                        if (arg[cle][4] !== noteCours[i].innerHTML && !noteCours[i].innerHTML.includes("%")) {
+                            uneCoteDeCoursAChange = true;
+                        }
 
                         setTabValues(arg[cle][2], arg[cle][3], arg[cle][0], arg[cle][1], arg[cle][4]);
 
-                        if ((noteCours[i].innerHTML === "" || /^[0-9.]{0,4}%/g.test(noteCours[i].innerHTML)) && secondRun) {
+                        if (noteCours.some(e => (e.innerHTML === "" || /^[0-9.]{0,4}%/g.test(e.innerHTML))) && secondRun) {
 
                             obtenirSommaireCours(liensCours[i], true, (fetchedData) => {
+
                                 if (![arg[cle][2], arg[cle][3], arg[cle][0], arg[cle][1]].every((e, i) => e === fetchedData[i]) && !(isNaN(fetchedData[0]) && isNaN(fetchedData[1]))) {
                                     console.log(`notes mises à jour pour ${cle}`);
                                     setTabValues(fetchedData[0], fetchedData[1], fetchedData[2], fetchedData[3], fetchedData[4]);
-                                    chrome.storage.sync.set({ [cle]: [fetchedData[2], fetchedData[3], fetchedData[0], fetchedData[1], fetchedData[4]] });
+                                    chrome.storage.sync.set({ [cle]: [fetchedData[2], fetchedData[3], fetchedData[0], fetchedData[1], fetchedData[4], fetchedData[5]] });
                                 }
                             });
                         }
@@ -275,19 +416,19 @@ function gererPageCours() {
                                 // obtenirSommaireCours(liensCours[i], true, (fetchedData) => {  //version asynchrone
                                 //     if (!(isNaN(fetchedData[0]) && isNaN(fetchedData[1]))) {
                                 //         setTabValues(fetchedData[0], fetchedData[1], fetchedData[2], fetchedData[3], fetchedData[4]);
-                                //         chrome.storage.sync.set({ [cle]: [fetchedData[2], fetchedData[3], fetchedData[0], fetchedData[1], fetchedData[4]] });
+                                //         chrome.storage.sync.set({ [cle]: [fetchedData[2], fetchedData[3], fetchedData[0], fetchedData[1], fetchedData[4], fetchedData[5]] });
                                 //     } else {
                                 //         thereIsNoData();
-                                //         chrome.storage.sync.set({ [cle]: ["", "white", 0, 0, 0] });
+                                //         chrome.storage.sync.set({ [cle]: ["", "white", 0, 0, 0, ""] });
                                 //     } 
                                 // });
                                 let fetchedData = obtenirSommaireCours(liensCours[i]);
                                 if (!(isNaN(fetchedData[0]) && isNaN(fetchedData[1]))) {
                                     setTabValues(fetchedData[0], fetchedData[1], fetchedData[2], fetchedData[3], fetchedData[4]);
-                                    chrome.storage.sync.set({ [cle]: [fetchedData[2], fetchedData[3], fetchedData[0], fetchedData[1], fetchedData[4]] });
+                                    chrome.storage.sync.set({ [cle]: [fetchedData[2], fetchedData[3], fetchedData[0], fetchedData[1], fetchedData[4], fetchedData[5]] });
                                 } else {
                                     thereIsNoData();
-                                    chrome.storage.sync.set({ [cle]: ["", "white", 0, 0, 0] });
+                                    chrome.storage.sync.set({ [cle]: ["", "white", 0, 0, 0, ""] });
                                 }
 
                             } else {
@@ -358,6 +499,10 @@ function gererPageCours() {
                 });
             }
 
+        }
+        if (uneCoteDeCoursAChange) {
+            console.log(`Une cote a changé`);
+            fetchInformationsCheminement();
         }
     }
 
@@ -432,6 +577,7 @@ function gererPageNotes() {
     let denominateurTotal = getNumber(reformatterNote(noteTotale.innerHTML).split("/")[1]);
     let valMoyTotale = getNumber(reformatterNote(noteGrpTotal.innerHTML).split("/")[0]);
     let rangCentileTotal = document.querySelector('#ctl00_ContentPlaceHolderMain_lesOnglets_tmpl0_txtRangCentile');
+    let coteFinale = document.querySelector('#ctl00_ContentPlaceHolderMain_lesOnglets_tmpl0_txtCoteFinale');
 
     let donneesGraphique = [];
 
@@ -468,7 +614,8 @@ function gererPageNotes() {
                 noteTotale.style.backgroundColor,
                 round1dec(toPercentage(valNoteTotale, denominateurTotal)),
                 round1dec(toPercentage(valMoyTotale, denominateurTotal)),
-                round1dec(denominateurTotal)
+                round1dec(denominateurTotal),
+                coteFinale.innerHTML
             ]
         });
         // console.log(`saved:`, `${session + cours}: ${[rangCentileTotal.innerHTML, noteTotale.style.backgroundColor, `${Math.round(valNoteTotale / denominateurTotal * 100)}%`]}`);
@@ -576,7 +723,7 @@ function gererPageNotes() {
             ]
         };
 
-        var options = {
+        let options = {
             scales: {
                 yAxes: [{
                     ticks: {
@@ -641,4 +788,14 @@ function gererPageNotes() {
     // Régler un bug relié aux menus déroulants qui ne fonctionnent plus quand on ajoute un élément au menu de gauche
     // il faut injecter un script dans la page pour avoir accès à ses fonctions jquery à partir de notre content script qui est isolé
     injectScript(/*javascript*/`$('#menuElem').menu_toggle_adder();`);
+}
+
+let infosProgrammesBac = {
+    CTN: { code: 7625, credits: 117 },
+    ELE: { code: 7694, credits: 115 },
+    LOG: { code: 7084, credits: 116 },
+    MEC: { code: 7684, credits: 115 },
+    GOL: { code: 7495, credits: 114 },
+    GPA: { code: 7485, credits: 117 },
+    GTI: { code: 7086, credits: 116 }
 }
