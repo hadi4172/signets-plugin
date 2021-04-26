@@ -1,7 +1,7 @@
 {
 	"name": "SignETS plugin",
 	"manifest_version": 2,
-	"version": "0.2.6",
+	"version": "0.3.6",
 	"description": "Une extension pour améliorer l'interface de SignETS",
 	"icons": {
 		"128": "assets/icon128.png",
@@ -18,11 +18,13 @@
 			"tippyjs/scale.css",
 			"tippyjs/light.css",
 			"tippyjs/light-border.css",
+			"loadingbarjs/loading-bar.min.css",
 			"chartjs/Chart.min.css"
 		],
 		"js": [
 			"tippyjs/popper.min.js",
 			"tippyjs/tippy-bundle.umd.min.js",
+			"loadingbarjs/loading-bar.min.js",
 			"chartjs/Chart.min.js",
 			"content.js"
 		]

@@ -1,3 +1,5 @@
+let etatProgrammes = [];
+
 window.onload = () => {
     // =========================================================================
     // Interface notes
@@ -120,9 +122,25 @@ function fetchInformationsCheminement() {
     getSourceFromLinkAsync("https://signets-ens.etsmtl.ca/Secure/DocEvolutionMoyenne.aspx", (resultatRequete) => {
         console.log(`[Signets Plugin] Mise à jour des informations sur le GPA`);
 
-        let etatProgrammes = [];
+        etatProgrammes = [];    //remise à zéro
+
+        const decoder = str => {
+            return str.replace(/&#(\d+);/g, (match, dec) => {
+                return String.fromCharCode(dec);
+            });
+        };
 
         const formatterDonneesCheminement = donnees => {
+            /**
+             * //Exemple de ce qui est retourné par la méthode
+             * [
+                    '7084|Baccalauréat en génie logiciel|0,00',
+                    '5730|Cheminement universitaire en technologie|2,75',
+                    'SessionCréditsMoyenne',
+                    'A20 16 2,76',
+                    'H21 3 2,70'
+                ]
+            */
             return donnees.split(/(?<=,[0-9]{2})|(?<=SessionCréditsMoyenne)/).map(e => {
                 if (/[0-9]{1,2}[AHE]{1}/.test(e)) {
                     let posSession = e.search(/[AHE]/);
@@ -132,13 +150,30 @@ function fetchInformationsCheminement() {
                 } else if (/^[0-9]{4} /.test(e)) {
                     e = e.replace(/:.*:/g, "");
                     return (e.substring(0, e.indexOf(" "))
-                        + "|" + e.substring(e.indexOf(" ") + 1, e.lastIndexOf(" "))
+                        + "|" + decoder(e.substring(e.indexOf(" ") + 1, e.lastIndexOf(" ")))
                         + "|" + e.substring(e.lastIndexOf(" ") + 1));
                 } else return e;
             });
         };
 
         const ajouterInformationsCheminement = (data, indexProgramme) => {
+            /* 
+            // Exemple de ce que la fonction ajoute à état programme
+            let structureEtatProgrammes = [
+                {
+                    nom: "Baccalauréat en génie logiciel",
+                    code: 7084,
+                    moyennecumulative: 2.76,
+                    sessions: [
+                        {
+                            id: "A20",
+                            credits: 16,
+                            moyenne: 3.18
+                        }//,...
+                    ]
+                }//,...
+            ]
+            */
             for (let line of data) {
                 if (line.split("|").length === 3) {
                     let splittedLine = line.split("|");
@@ -167,23 +202,26 @@ function fetchInformationsCheminement() {
             }
         };
 
-        resultatRequete = minifyHTML(resultatRequete);
-
-        let stringVerificationPlusieursProgrammes =
-            formatterDonneesCheminement(
+        const traitementDesDonneesRecues = donneesRecues => {
+            return formatterDonneesCheminement(
                 stripHTML(
                     getSubstringBetween(
-                        resultatRequete,
+                        donneesRecues,
                         `<strong>Choisissez le programme d'études dans liste ci-dessous:`,
                         `<div id="ctl00_ContentPlaceHolderMain_gridSessions_eppool"`
                     )
                 )
-            );
+            )
+        }
+
+        resultatRequete = minifyHTML(resultatRequete);
+
+        let stringVerificationPlusieursProgrammes = traitementDesDonneesRecues(resultatRequete);
 
         let lignesDeProgrammes = stringVerificationPlusieursProgrammes.filter(e => e.includes("|"));
         let ilYaPlusieursProgrammes = stringVerificationPlusieursProgrammes.length > 1;
 
-        if (!ilYaPlusieursProgrammes) {
+        if (!ilYaPlusieursProgrammes) { //nous avons déja toute les informations requises
             ajouterInformationsCheminement(stringVerificationPlusieursProgrammes, 0);
             // console.log(JSON.stringify(etatProgrammes, null, 2));
             chrome.storage.sync.set({ etatProgrammes: etatProgrammes });
@@ -199,34 +237,29 @@ function fetchInformationsCheminement() {
 
             for (let i = 0, length = codesDeProgrammes.length; i < length; i++) {
 
-                let data = `ctl00$ContentPlaceHolderMain$lisPgm=${codesDeProgrammes[i]}`
-                    + `&__EVENTTARGET=ctl00$ContentPlaceHolderMain$lisPgm`
-                    + `&__VIEWSTATE=${viewState}`
-                    + `&__VIEWSTATEGENERATOR=${viewStateGenerator}`
-                    + `&__EVENTVALIDATION=${eventValidation}`;
+                if (i === 0) {      //nous avons déja accès aux informations du programme le plus récent, pas besoin de faire une autre requête pour lui
 
-                let xhr = new XMLHttpRequest();
-                xhr.open('POST', 'https://signets-ens.etsmtl.ca/Secure/DocEvolutionMoyenne.aspx', true);
-                xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
-                xhr.onload = function () {
-                    // do something to response
+                    ajouterInformationsCheminement(stringVerificationPlusieursProgrammes, 0);
+                } else {
 
-                    ajouterInformationsCheminement(
-                        formatterDonneesCheminement(
-                            stripHTML(
-                                getSubstringBetween(
-                                    minifyHTML(xhr.responseText),
-                                    `<strong>Choisissez le programme d'études dans liste ci-dessous:`,
-                                    `<div id="ctl00_ContentPlaceHolderMain_gridSessions_eppool"`
-                                )
-                            )
-                        ), i
-                    );
+                    let data = `ctl00$ContentPlaceHolderMain$lisPgm=${codesDeProgrammes[i]}`
+                        + `&__EVENTTARGET=ctl00$ContentPlaceHolderMain$lisPgm`
+                        + `&__VIEWSTATE=${viewState}`
+                        + `&__VIEWSTATEGENERATOR=${viewStateGenerator}`
+                        + `&__EVENTVALIDATION=${eventValidation}`;
 
-                    // console.log(JSON.stringify(etatProgrammes, null, 2));
-                    chrome.storage.sync.set({ etatProgrammes: etatProgrammes });
-                };
-                xhr.send(data);
+                    let xhr = new XMLHttpRequest();
+                    xhr.open('POST', 'https://signets-ens.etsmtl.ca/Secure/DocEvolutionMoyenne.aspx', true);
+                    xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+                    xhr.onload = function () {
+                        // do something to response
+                        ajouterInformationsCheminement(traitementDesDonneesRecues(minifyHTML(xhr.responseText)), i);
+
+                        console.log(JSON.stringify(etatProgrammes, null, 2));
+                        chrome.storage.sync.set({ etatProgrammes: etatProgrammes });
+                    };
+                    xhr.send(data);
+                }
             }
         }
     });
@@ -257,7 +290,7 @@ function gererPageCours() {
 
     let expandButtons = Array.from(document.querySelectorAll('[mkr="expColBtn"]'));
 
-    chrome.storage.sync.get('noColors', function (arg) {
+    chrome.storage.sync.get(['noColors', 'etatProgrammes', 'theme'], function (arg) {
 
         if (!arg.noColors) {
             injectCSS( /*css*/ `
@@ -289,6 +322,169 @@ function gererPageCours() {
                 }
                 `);
             }, 50);
+        }
+
+        let theme = "default-theme";
+        if (typeof arg.theme !== 'undefined') {
+            theme = arg.theme;
+        }
+
+        if (typeof arg.etatProgrammes === 'undefined') {
+            fetchInformationsCheminement();
+        } else {
+            let leProgrammeActuelEstConnu = infosProgrammes.some(p => p.code === arg.etatProgrammes[0].code);
+            
+            document.querySelector("#ctl00_LoginViewLeftColumn_MenuVertical").innerHTML += /*html*/`
+            <div id="elementsAjoutesAGauche" style="transition:opacity 0.25s ease-in-out;">
+                ${leProgrammeActuelEstConnu ? /*html*/`
+                </br>
+                <div id="progressbar-programme" style="user-select: none; -webkit-user-select: none;">
+                <div style="width: 100%; fontSize: 12; color:dimgray; text-align:center; font-weight: bolder;">
+                    Complétion du programme
+                </div>
+                </br>
+                <div class="myBar label-center" width="100%" data-value="50" style="width: 100%;"></div>
+                </div>`
+                        : ""}
+                
+                </br>
+                <canvas id="GPAChart" width="250" height="300"></canvas>
+                </br>
+            </div>
+            <div style="font-weight:bold; text-align:right; border-top: 1px solid #bbb;">
+            </br>
+            <a
+                title="Si vous avez aimé mon extension, n'hésitez pas à aller mettre une étoile et partager avec vos amis :)" 
+                target="_blank" 
+                id="linksignetsplugin"
+                href="https://chrome.google.com/webstore/detail/signets-plugin/bgbigmlncgkakhiaokjbhibkednbibpf">
+                SIGNETS plugin
+            </a>
+            </div>`;
+
+            const lightenOrDarkenColor = (color, amount) => {
+                return '#' + color.replace(/^#/, '').replace(/../g,
+                    color => ('0' + Math.min(255, Math.max(0, parseInt(color, 16) + amount))
+                        .toString(16)).substr(-2));
+            };
+
+            let baseColor = theme === "default-theme" ? "#4F7795" : "#B90E1C";
+
+            let dataSets = arg.etatProgrammes.map((p, i) => {
+                let programColor = lightenOrDarkenColor(baseColor, 75 * i);
+                let GPACumulatifs = arg.etatProgrammes[i].sessions.map((s, j) => {
+                    let sessionsEcoules = arg.etatProgrammes[i].sessions.slice(0, j + 1);
+                    return round2dec(getSum(sessionsEcoules.map(m => m.moyenne * m.credits)) / getSum(sessionsEcoules.map(m => m.credits)));
+                });
+
+                let sigleProgramme = infosProgrammes.find(k => k.code == arg.etatProgrammes[i].code);
+
+                let label = typeof sigleProgramme !== "undefined" ? sigleProgramme.sigle : arg.etatProgrammes[i].code;
+
+                return {
+                    label: label,
+                    fill: false,
+                    showLine: true,
+                    lineTension: 0.1,
+                    backgroundColor: programColor,
+                    borderColor: programColor,
+                    borderCapStyle: 'square',
+                    borderJoinStyle: 'miter',
+                    pointBorderColor: baseColor,
+                    pointBorderWidth: 1,
+                    pointHoverRadius: 5,
+                    pointHoverBackgroundColor: programColor,
+                    pointHoverBorderColor: baseColor,
+                    pointHoverBorderWidth: 1.5,
+                    pointRadius: 3,
+                    pointHitRadius: 10,
+                    data: GPACumulatifs,
+                    spanGaps: true,
+                }
+            });
+
+            let labels = [...new Set(arg.etatProgrammes.map((p, i) => arg.etatProgrammes[i].sessions.map(s => s.id)).reverse().flat()), ""];
+
+            let data = {
+                labels: labels,
+                datasets: dataSets.reverse()
+            };
+
+            let options = {
+                scales: {
+                    yAxes: [{
+                        ticks: {
+                            // min: 0,
+                            max: 4.3,
+                            suggestedMin: 2
+                        },
+                        scaleLabel: {
+                            display: true,
+                            labelString: 'GPA cumulatif',
+                            fontSize: 12
+                        }
+                    }],
+                    xAxes: [{
+                        scaleLabel: {
+                            display: true,
+                            labelString: 'Session',
+                            fontSize: 11.5
+                        }
+                    }],
+                },
+                title: {
+                    display: true,
+                    padding: 3,
+                    fontSize: 12,
+                    text: 'Évolution de votre GPA'
+                }
+            };
+
+            new Chart(document.getElementById('GPAChart'), {
+                type: 'line',
+                data: data,
+                options: options
+            });
+
+            if (leProgrammeActuelEstConnu) {
+                let pourcentageComplete = round1dec(toPercentage(getSum(arg.etatProgrammes[0].sessions.map(s => s.credits)), infosProgrammes.find(p => p.code === arg.etatProgrammes[0].code).credits));
+
+                new ldBar(".myBar", {
+                    "stroke": theme === "default-theme" ? "#4F7795" : "#B90E1C",
+                    // "stroke-width": 10,
+                    "aspect-ratio": "none",
+                    "preset": "line",
+                    "value": pourcentageComplete,
+                    // "data-stroke-width":"100%"
+                });
+
+                injectCSS(
+                /*css*/`
+                .ldBar-label {
+                    color:dimgray;
+                    margin-top:10px;
+                    font-size: 1.15em;
+                    font-weight: bolder;
+                  }
+
+                  .ldBar path.mainline {
+                    stroke-width: 10;
+                  }
+
+                  .ldBar path.baseline {
+                    stroke-width: 14;
+                    stroke: #f1f2f3;
+                    box-shadow: 20px 20px 20px 20px dimgray;
+                  }
+                  
+                  `);
+            }
+
+            document.querySelector('#linksignetsplugin').setAttribute("style", `color:${baseColor}; text-decoration: none;`);
+
+            // Régler un bug relié aux menus déroulants qui ne fonctionnent plus quand on ajoute un élément au menu de gauche
+            // il faut injecter un script dans la page pour avoir accès à ses fonctions jquery à partir de notre content script qui est isolé
+            injectScript(/*javascript*/`$('#menuElem').menu_toggle_adder();`);
         }
     });
 
@@ -347,7 +543,7 @@ function gererPageCours() {
 
                 let cle = `${session.innerHTML.replace(/ /g, "")}${siglesCours[i]}`;
 
-                chrome.storage.sync.get([cle, 'theme', 'showGrades', 'preciseGrades', 'etatProgrammes'], function (arg) {
+                chrome.storage.sync.get([cle, 'theme', 'showGrades', 'preciseGrades'], function (arg) {
                     let theme = "default-theme";
                     if (typeof arg.theme !== 'undefined') {
                         theme = arg.theme;
@@ -374,12 +570,6 @@ function gererPageCours() {
                         }
                         donneesGraphique.push([siglesCours[i], note, moyenne ? moyenne : 0]);
                     }
-
-                    if (typeof arg.etatProgrammes === 'undefined') {
-                        fetchInformationsCheminement();
-                    }/*  else if(session === sessions[0] && i === 0 && secondRun){
-                        console.log(JSON.stringify(arg.etatProgrammes, null, 2));
-                    } */
 
                     if (typeof arg[cle] !== 'undefined' && !isNaN(parseInt(arg[cle][2]))) {
 
@@ -491,8 +681,32 @@ function gererPageCours() {
                             }
                         });
 
+                        let elementsDeGauche = document.getElementById('elementsAjoutesAGauche');
+
+                        const hideGPAChart = () => {
+                            if (Array.from(document.querySelectorAll(".tippy-box")).some(e => e.getAttribute("data-state") === "visible")) {
+                                elementsDeGauche.style.opacity = 0
+                            }
+                        }
+
+                        const showGPAChart = () => {
+                            if (!Array.from(document.querySelectorAll(".tippy-box")).some(e => e.getAttribute("data-state") === "visible")) {
+                                elementsDeGauche.style.opacity = 1;
+                            }
+                        }
+
                         tippy(session.parentNode.nextSibling, {
                             content: graphique,
+                            onShow(instance) {
+                                setTimeout(() => {
+                                    hideGPAChart();
+                                }, 300);
+                            },
+                            onHidden(instance) {
+                                setTimeout(() => {
+                                    showGPAChart();
+                                }, 300);
+                            }
                         });
                         sessionsAvecGraphiqueActive.push(cle);
                     }
@@ -518,6 +732,7 @@ function gererPageCours() {
 }
 
 function gererPageNotes() {
+
     console.log(`[Interface notes]`);
 
     chrome.storage.sync.get('noColors', function (arg) {
@@ -790,12 +1005,13 @@ function gererPageNotes() {
     injectScript(/*javascript*/`$('#menuElem').menu_toggle_adder();`);
 }
 
-let infosProgrammesBac = {
-    CTN: { code: 7625, credits: 117 },
-    ELE: { code: 7694, credits: 115 },
-    LOG: { code: 7084, credits: 116 },
-    MEC: { code: 7684, credits: 115 },
-    GOL: { code: 7495, credits: 114 },
-    GPA: { code: 7485, credits: 117 },
-    GTI: { code: 7086, credits: 116 }
-}
+let infosProgrammes = [
+    { sigle: "CUT", code: 5730, credits: 30 },
+    { sigle: "CTN", code: 7625, credits: 117 },
+    { sigle: "ELE", code: 7694, credits: 115 },
+    { sigle: "LOG", code: 7084, credits: 116 },
+    { sigle: "MEC", code: 7684, credits: 115 },
+    { sigle: "GOL", code: 7495, credits: 114 },
+    { sigle: "GPA", code: 7485, credits: 117 },
+    { sigle: "GTI", code: 7086, credits: 116 }
+]
