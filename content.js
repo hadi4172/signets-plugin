@@ -371,7 +371,10 @@ function gererPageCours() {
                 let programColor = lightenOrDarkenColor(baseColor, 75 * i);
                 let GPACumulatifs = etatProgrammes[i].sessions.map((s, j) => {
                     let sessionsEcoules = etatProgrammes[i].sessions.slice(0, j + 1);
-                    return round2dec(getSum(sessionsEcoules.map(m => m.moyenne * m.credits)) / getSum(sessionsEcoules.map(m => m.credits)));
+                    return {
+                        x: sessionsEcoules[sessionsEcoules.length - 1].id,
+                        y: round2dec(getSum(sessionsEcoules.map(m => m.moyenne * m.credits)) / getSum(sessionsEcoules.map(m => m.credits)))
+                    };
                 });
 
                 let sigleProgramme = infosProgrammes.find(k => k.code == etatProgrammes[i].code);
