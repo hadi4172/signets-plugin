@@ -141,7 +141,7 @@ function fetchInformationsCheminement(callback = () => { }) {
                     'H21 3 2,70'
                 ]
             */
-            return donnees.split(/(?<=,[0-9]{2})|(?<=SessionCréditsMoyenne)/).map(e => {
+            return decoder(donnees).split(/(?<=,[0-9]{2})|(?<=SessionCréditsMoyenne)/).map(e => {
                 if (/[0-9]{1,2}[AHEÉ]{1}/.test(e)) {
                     let posSession = e.search(/[AHEÉ]/);
                     return (e.substring(posSession, posSession + 3) + " "
@@ -150,7 +150,7 @@ function fetchInformationsCheminement(callback = () => { }) {
                 } else if (/^[0-9]{4} /.test(e)) {
                     e = e.replace(/:.*:/g, "");
                     return (e.substring(0, e.indexOf(" "))
-                        + "|" + decoder(e.substring(e.indexOf(" ") + 1, e.lastIndexOf(" ")))
+                        + "|" + e.substring(e.indexOf(" ") + 1, e.lastIndexOf(" "))
                         + "|" + e.substring(e.lastIndexOf(" ") + 1));
                 } else return e;
             });
@@ -329,7 +329,7 @@ function gererPageCours() {
         }
 
         const chargerElementsDeGauche = (etatProgrammes) => {
-            let leProgrammeActuelEstConnu = infosProgrammes.some(p => p.code === etatProgrammes[0].code);
+            let leProgrammeActuelEstConnu = infosProgrammes.some((p, i) => p.code === etatProgrammes[0].code && i < INDEX_MAITRISE);
 
             document.querySelector("#ctl00_LoginViewLeftColumn_MenuVertical").innerHTML += /*html*/`
         <div id="elementsAjoutesAGauche" style="transition:opacity 0.25s ease-in-out;">
@@ -559,7 +559,8 @@ function gererPageCours() {
                         rangCentilesCours[i].innerHTML = rangCentile;
                         rangCentilesCours[i].style.color = "black";
                         rangCentilesCours[i].style.userSelect = "auto";
-                        rangCentilesCours[i].parentNode.setAttribute("style", `background-color: ${color};`);
+                        if (rangCentilesCours[i].parentNode.getAttribute("style") !== "background-color: lightblue;")
+                            rangCentilesCours[i].parentNode.setAttribute("style", `background-color: ${color};`);
 
                         noteCours[i].style.whiteSpace = "nowrap";
 
@@ -1011,6 +1012,8 @@ function gererPageNotes() {
     injectScript(/*javascript*/`$('#menuElem').menu_toggle_adder();`);
 }
 
+const INDEX_MAITRISE = 8;
+
 let infosProgrammes = [
     { sigle: "CUT", code: 5730, credits: 30 },
     { sigle: "CTN", code: 7625, credits: 117 },
@@ -1020,6 +1023,7 @@ let infosProgrammes = [
     { sigle: "GOL", code: 7495, credits: 114 },
     { sigle: "GPA", code: 7485, credits: 117 },
     { sigle: "GTI", code: 7086, credits: 116 },
+    
     { sigle: "MGA", code: 3235, credits: 45 },
     { sigle: "MGA", code: 1560, credits: 45 },
     { sigle: "MPA", code: 3034, credits: 45 },
@@ -1038,8 +1042,5 @@ let infosProgrammes = [
     { sigle: "MGM", code: 3054, credits: 45 },
     { sigle: "MGM", code: 3059, credits: 45 },
     { sigle: "MGL", code: 1822, credits: 45 },
-    { sigle: "MGL", code: 1560, credits: 45 },
-    { sigle: "GTI", code: 7086, credits: 45 },
-    { sigle: "GTI", code: 7086, credits: 45 },
-    { sigle: "GTI", code: 7086, credits: 45 }
+    { sigle: "MGL", code: 1560, credits: 45 }
 ]
