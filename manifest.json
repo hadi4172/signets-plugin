@@ -1,45 +1,45 @@
 {
-	"name": "SignETS plugin",
-	"manifest_version": 2,
-	"version": "0.3.8",
-	"description": "Une extension pour améliorer l'interface de SignETS",
-	"icons": {
-		"128": "assets/icon128.png",
-		"48": "assets/icon48.png",
-		"16": "assets/icon16.png"
-	},
-	"browser_action": {
-		"default_icon": "assets/icon16.png",
-		"default_popup": "popup.html"
-	},
-	"content_scripts": [{
-		"matches": ["*://signets-ens.etsmtl.ca/*"],
-		"css": [
-			"tippyjs/scale.css",
-			"tippyjs/light.css",
-			"tippyjs/light-border.css",
-			"loadingbarjs/loading-bar.min.css",
-			"chartjs/Chart.min.css"
-		],
-		"js": [
-			"tippyjs/popper.min.js",
-			"tippyjs/tippy-bundle.umd.min.js",
-			"loadingbarjs/loading-bar.min.js",
-			"chartjs/Chart.min.js",
-			"content.js"
-		]
-	},{
-		"matches": ["*://signets-ens.etsmtl.ca/*"],
-		"js": [
-			"changeTheme.js"
-		],
-		"run_at": "document_start"
-	}],
-	"web_accessible_resources": [
-		"assets/pavillonE.jpg"
-	  ],
-	"content_security_policy": "script-src 'self' https://*.etsmtl.ca/*; object-src 'self'",
-	"permissions": [
-		"storage"
-	]
+    "name": "SignETS plugin",
+    "manifest_version": 2,
+    "version": "0.3.10",
+    "description": "Une extension pour améliorer l'interface de SignETS",
+    "icons": {
+        "128": "assets/icon128.png",
+        "48": "assets/icon48.png",
+        "16": "assets/icon16.png"
+    },
+    "browser_action": {
+        "default_icon": "assets/icon16.png",
+        "default_popup": "popup.html"
+    },
+    "content_scripts": [{
+        "matches": ["*://signets-ens.etsmtl.ca/*"],
+        "css": [
+            "tippyjs/scale.css",
+            "tippyjs/light.css",
+            "tippyjs/light-border.css",
+            "loadingbarjs/loading-bar.min.css",
+            "chartjs/Chart.min.css"
+        ],
+        "js": [
+            "tippyjs/popper.min.js",
+            "tippyjs/tippy-bundle.umd.min.js",
+            "loadingbarjs/loading-bar.min.js",
+            "chartjs/Chart.min.js",
+            "content.js"
+        ]
+    }, {
+        "matches": ["*://signets-ens.etsmtl.ca/*"],
+        "js": [
+            "changeTheme.js"
+        ],
+        "run_at": "document_start"
+    }],
+    "web_accessible_resources": [
+        "assets/pavillonE.jpg"
+    ],
+    "content_security_policy": "script-src 'self' https://*.etsmtl.ca/*; object-src 'self'",
+    "permissions": [
+        "storage"
+    ]
 }
