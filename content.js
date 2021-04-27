@@ -124,11 +124,7 @@ function fetchInformationsCheminement(callback = () => { }) {
 
         etatProgrammes = [];    //remise à zéro
 
-        const decoder = str => {
-            return str.replace(/&#(\d+);/g, (match, dec) => {
-                return String.fromCharCode(dec);
-            });
-        };
+        const decoder = str => str.replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec));
 
         const formatterDonneesCheminement = donnees => {
             /**
@@ -225,7 +221,7 @@ function fetchInformationsCheminement(callback = () => { }) {
             ajouterInformationsCheminement(stringVerificationPlusieursProgrammes, 0);
             // console.log(JSON.stringify(etatProgrammes, null, 2));
             chrome.storage.sync.set({ etatProgrammes: etatProgrammes });
-
+            callback();
         } else {
             // il faut chercher l'information de tous les programmes
             let codesDeProgrammes = lignesDeProgrammes.map(l => l.split("|")[0]);
@@ -253,14 +249,16 @@ function fetchInformationsCheminement(callback = () => { }) {
                         // do something to response
                         ajouterInformationsCheminement(traitementDesDonneesRecues(minifyHTML(xhr.responseText)), i);
 
-                        console.log(JSON.stringify(etatProgrammes, null, 2));
-                        chrome.storage.sync.set({ etatProgrammes: etatProgrammes });
+                        if (i === (length - 1)) {
+                            console.log(JSON.stringify(etatProgrammes, null, 2));
+                            chrome.storage.sync.set({ etatProgrammes: etatProgrammes });
+                            callback();
+                        }
                     };
                     xhr.send(data);
                 }
             }
         }
-        callback();
     });
 }
 
@@ -289,7 +287,7 @@ function gererPageCours() {
 
     let expandButtons = Array.from(document.querySelectorAll('[mkr="expColBtn"]'));
 
-    chrome.storage.sync.get(['noColors', 'etatProgrammes', 'theme'], function (arg) {
+    chrome.storage.sync.get(['noColors', 'etatProgrammes', 'theme', 'creditsSansGPAParProgramme'], function (arg) {
 
         if (!arg.noColors) {
             injectCSS( /*css*/ `
@@ -329,7 +327,7 @@ function gererPageCours() {
         }
 
         const chargerElementsDeGauche = (etatProgrammes) => {
-            let leProgrammeActuelEstConnu = infosProgrammes.some((p, i) => p.code === etatProgrammes[0].code && i < INDEX_MAITRISE);
+            let leProgrammeActuelEstConnu = infosProgrammes.some((p, i) => p.code === etatProgrammes[0].code /* && i < INDEX_MAITRISE */);
 
             document.querySelector("#ctl00_LoginViewLeftColumn_MenuVertical").innerHTML += /*html*/`
         <div id="elementsAjoutesAGauche" style="transition:opacity 0.25s ease-in-out;">
@@ -447,7 +445,17 @@ function gererPageCours() {
             });
 
             if (leProgrammeActuelEstConnu) {
-                let pourcentageComplete = round1dec(toPercentage(getSum(etatProgrammes[0].sessions.map(s => s.credits)), infosProgrammes.find(p => p.code === etatProgrammes[0].code).credits));
+                let creditsReussisNAffectantPasLaMoyenne = undefined;
+
+                if (typeof arg.creditsSansGPAParProgramme !== 'undefined') {
+                    creditsReussisNAffectantPasLaMoyenne = arg.creditsSansGPAParProgramme.find(p => p.programme == etatProgrammes[0].code).creditsSansGPA;
+                }
+
+                if (typeof creditsReussisNAffectantPasLaMoyenne === 'undefined') {
+                    creditsReussisNAffectantPasLaMoyenne = 0;
+                }
+
+                let pourcentageComplete = round1dec(toPercentage(getSum(etatProgrammes[0].sessions.map(s => s.credits)) + creditsReussisNAffectantPasLaMoyenne, infosProgrammes.find(p => p.code === etatProgrammes[0].code).credits));
 
                 new ldBar(".myBar", {
                     "stroke": theme === "default-theme" ? "#4F7795" : "#B90E1C",
@@ -537,11 +545,15 @@ function gererPageCours() {
 
         for (let session of sessions) {
             let rangCentilesCours = Array.from(session.parentNode.nextSibling.querySelectorAll('[aria-describedby*="_columnheader_6"]'));
+            let creditsCours = Array.from(session.parentNode.nextSibling.querySelectorAll('[aria-describedby*="_columnheader_4"]'));
+            let programmeCours = Array.from(session.parentNode.nextSibling.querySelectorAll('[aria-describedby*="_columnheader_1"]'));
             let noteCours = Array.from(session.parentNode.nextSibling.querySelectorAll('[aria-describedby*="_columnheader_5"]'));
             let siglesCours = Array.from(session.parentNode.nextSibling.querySelectorAll('[aria-describedby*="_columnheader_2"]')).map(x => x.textContent.split("-")[0]);
             let liensCours = Array.from(session.parentNode.nextSibling.querySelectorAll('[aria-describedby*="_columnheader_2"]')).map(x => x.firstElementChild != null ? x.firstElementChild.href : "");
 
             let donneesGraphique = [];  //structure : [[sigle,note,moyenne],[sigle,note,moyenne],...]
+
+            let coursNAffectantPasLaMoyenne = [];  //structure : [{cle:cle, programme:code, credits:credits},...]
 
             for (let i = 0, length = rangCentilesCours.length; i < length; i++) {
 
@@ -549,10 +561,38 @@ function gererPageCours() {
 
                 let cle = `${session.innerHTML.replace(/ /g, "")}${siglesCours[i]}`;
 
-                chrome.storage.sync.get([cle, 'theme', 'showGrades', 'preciseGrades'], function (arg) {
+                chrome.storage.sync.get([cle, 'theme', 'showGrades', 'preciseGrades', 'coursSansGPA'], function (arg) {
                     let theme = "default-theme";
                     if (typeof arg.theme !== 'undefined') {
                         theme = arg.theme;
+                    }
+
+                    if (typeof arg.coursSansGPA !== 'undefined') {
+                        coursNAffectantPasLaMoyenne = arg.coursSansGPA;
+                    }
+
+                    if (/[KSVZ]/.test(noteCours[i].innerHTML) && !coursNAffectantPasLaMoyenne.some(e => e.cle === cle)) {
+                        coursNAffectantPasLaMoyenne.push({
+                            cle: cle,
+                            programme: parseInt(programmeCours[i].innerHTML),
+                            credits: parseInt(creditsCours[i].innerHTML)
+                        });
+                    }
+
+                    if (i == length - 1) {
+                        let creditsSansGPAParProgramme = [];  //structure : [{programme:code, creditsSansGPA:credits},...]
+                        let programmes = [...new Set(coursNAffectantPasLaMoyenne.map(c => c.programme))];
+                        for (const programme of programmes) {
+                            creditsSansGPAParProgramme.push({
+                                programme: programme,
+                                creditsSansGPA: getSum(coursNAffectantPasLaMoyenne.filter(c => c.programme === programme).map(c => c.credits))
+                            });
+                        }
+
+                        chrome.storage.sync.set({
+                            coursSansGPA: coursNAffectantPasLaMoyenne,
+                            creditsSansGPAParProgramme: creditsSansGPAParProgramme
+                        });
                     }
 
                     const setTabValues = (note, moyenne, rangCentile, color, denominator) => {
@@ -692,6 +732,7 @@ function gererPageCours() {
 
                         const hideGPAChart = () => {
                             if (Array.from(document.querySelectorAll(".tippy-box")).some(e => e.getAttribute("data-state") === "visible")) {
+                                if (elementsDeGauche == null) elementsDeGauche = document.getElementById('elementsAjoutesAGauche');
                                 elementsDeGauche.style.opacity = 0
                             }
                         }
@@ -1023,7 +1064,7 @@ let infosProgrammes = [
     { sigle: "GOL", code: 7495, credits: 114 },
     { sigle: "GPA", code: 7485, credits: 117 },
     { sigle: "GTI", code: 7086, credits: 116 },
-    
+
     { sigle: "MGA", code: 3235, credits: 45 },
     { sigle: "MGA", code: 1560, credits: 45 },
     { sigle: "MPA", code: 3034, credits: 45 },
