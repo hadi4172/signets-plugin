@@ -117,7 +117,7 @@ async function getSourceFromLinkAsync(link, callback) {
 
 function fetchInformationsCheminement(callback = () => { }) {
 
-    //première requête GET pour obtenir les informations sur le cheminement pour un seul programme 
+    //première requête GET pour obtenir les informations sur le cheminement pour un seul programme
     //ou pour obtenir les arguments nécessaires pour lancer une requête POST et chercher les informations des autres programmes
     getSourceFromLinkAsync("https://signets-ens.etsmtl.ca/Secure/DocEvolutionMoyenne.aspx", (resultatRequete) => {
         console.log(`[Signets Plugin] Mise à jour des informations sur le GPA`);
@@ -157,7 +157,7 @@ function fetchInformationsCheminement(callback = () => { }) {
         };
 
         const ajouterInformationsCheminement = (data, indexProgramme) => {
-            /* 
+            /*
             // Exemple de ce que la fonction ajoute à état programme
             let structureEtatProgrammes = [
                 {
@@ -236,9 +236,7 @@ function fetchInformationsCheminement(callback = () => { }) {
             let eventValidation = encodeURIComponent(getSubstringBetween(resultatRequete, `id="__EVENTVALIDATION" value="`, `" />`));
 
             for (let i = 0, length = codesDeProgrammes.length; i < length; i++) {
-
                 if (i === 0) {      //nous avons déja accès aux informations du programme le plus récent, pas besoin de faire une autre requête pour lui
-
                     ajouterInformationsCheminement(stringVerificationPlusieursProgrammes, 0);
                 } else {
 
@@ -305,7 +303,7 @@ function gererPageCours() {
                 [aria-describedby*="_columnheader_6"]{
                     text-align: center !important;
                 }
-                
+
                 .igtab_Office2010BlueTHContent{
                     overflow:auto!important;
                 }`
@@ -615,7 +613,7 @@ function gererPageCours() {
                                 //     } else {
                                 //         thereIsNoData();
                                 //         chrome.storage.sync.set({ [cle]: ["", "white", 0, 0, 0, ""] });
-                                //     } 
+                                //     }
                                 // });
                                 let fetchedData = obtenirSommaireCours(liensCours[i]);
                                 if (!(isNaN(fetchedData[0]) && isNaN(fetchedData[1]))) {
@@ -749,7 +747,7 @@ function gererPageNotes() {
                     border-bottom: 1px solid rgba(0,0,0,0.07);
                     background-color:inherit !important;
                 }
-                
+
                 .igtab_Office2010BlueTHContent{
                     overflow:auto!important;
                 }
@@ -808,8 +806,8 @@ function gererPageNotes() {
     <div style="font-weight:bold; text-align:right; border-top: 1px solid #bbb;">
       </br>
       <a
-         title="Si vous avez aimé mon extension, n'hésitez pas à aller mettre une étoile et partager avec vos amis :)" 
-         target="_blank" 
+         title="Si vous avez aimé mon extension, n'hésitez pas à aller mettre une étoile et partager avec vos amis :)"
+         target="_blank"
          id="linksignetsplugin"
          href="https://chrome.google.com/webstore/detail/signets-plugin/bgbigmlncgkakhiaokjbhibkednbibpf">
            SIGNETS plugin
