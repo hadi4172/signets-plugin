@@ -115,7 +115,7 @@ async function getSourceFromLinkAsync(link, callback) {
     }
 }
 
-function fetchInformationsCheminement() {
+function fetchInformationsCheminement(callback = () => { }) {
 
     //première requête GET pour obtenir les informations sur le cheminement pour un seul programme 
     //ou pour obtenir les arguments nécessaires pour lancer une requête POST et chercher les informations des autres programmes
@@ -142,8 +142,8 @@ function fetchInformationsCheminement() {
                 ]
             */
             return donnees.split(/(?<=,[0-9]{2})|(?<=SessionCréditsMoyenne)/).map(e => {
-                if (/[0-9]{1,2}[AHE]{1}/.test(e)) {
-                    let posSession = e.search(/[AHE]/);
+                if (/[0-9]{1,2}[AHEÉ]{1}/.test(e)) {
+                    let posSession = e.search(/[AHEÉ]/);
                     return (e.substring(posSession, posSession + 3) + " "
                         + e.substring(posSession + 3, e.indexOf(",") - 1) + " "
                         + e.substring(e.indexOf(",") - 1));
@@ -178,7 +178,7 @@ function fetchInformationsCheminement() {
                 if (line.split("|").length === 3) {
                     let splittedLine = line.split("|");
 
-                    if (!etatProgrammes.some(p => p.code === parseInt(splittedLine[0]))) {
+                    if (!etatProgrammes.some(p => p.code === parseInt(splittedLine[0])) && parseInt(splittedLine[0]) > 1000) {
                         etatProgrammes.push({
                             nom: splittedLine[1],
                             code: parseInt(splittedLine[0]),
@@ -219,7 +219,7 @@ function fetchInformationsCheminement() {
         let stringVerificationPlusieursProgrammes = traitementDesDonneesRecues(resultatRequete);
 
         let lignesDeProgrammes = stringVerificationPlusieursProgrammes.filter(e => e.includes("|"));
-        let ilYaPlusieursProgrammes = stringVerificationPlusieursProgrammes.length > 1;
+        let ilYaPlusieursProgrammes = lignesDeProgrammes.length > 1;
 
         if (!ilYaPlusieursProgrammes) { //nous avons déja toute les informations requises
             ajouterInformationsCheminement(stringVerificationPlusieursProgrammes, 0);
@@ -262,6 +262,7 @@ function fetchInformationsCheminement() {
                 }
             }
         }
+        callback();
     });
 }
 
@@ -329,38 +330,36 @@ function gererPageCours() {
             theme = arg.theme;
         }
 
-        if (typeof arg.etatProgrammes === 'undefined') {
-            fetchInformationsCheminement();
-        } else {
-            let leProgrammeActuelEstConnu = infosProgrammes.some(p => p.code === arg.etatProgrammes[0].code);
-            
+        const chargerElementsDeGauche = (etatProgrammes) => {
+            let leProgrammeActuelEstConnu = infosProgrammes.some(p => p.code === etatProgrammes[0].code);
+
             document.querySelector("#ctl00_LoginViewLeftColumn_MenuVertical").innerHTML += /*html*/`
-            <div id="elementsAjoutesAGauche" style="transition:opacity 0.25s ease-in-out;">
-                ${leProgrammeActuelEstConnu ? /*html*/`
-                </br>
-                <div id="progressbar-programme" style="user-select: none; -webkit-user-select: none;">
-                <div style="width: 100%; fontSize: 12; color:dimgray; text-align:center; font-weight: bolder;">
-                    Complétion du programme
-                </div>
-                </br>
-                <div class="myBar label-center" width="100%" data-value="50" style="width: 100%;"></div>
-                </div>`
-                        : ""}
-                
-                </br>
-                <canvas id="GPAChart" width="250" height="300"></canvas>
-                </br>
-            </div>
-            <div style="font-weight:bold; text-align:right; border-top: 1px solid #bbb;">
+        <div id="elementsAjoutesAGauche" style="transition:opacity 0.25s ease-in-out;">
+            ${leProgrammeActuelEstConnu ? /*html*/`
             </br>
-            <a
-                title="Si vous avez aimé mon extension, n'hésitez pas à aller mettre une étoile et partager avec vos amis :)" 
-                target="_blank" 
-                id="linksignetsplugin"
-                href="https://chrome.google.com/webstore/detail/signets-plugin/bgbigmlncgkakhiaokjbhibkednbibpf">
-                SIGNETS plugin
-            </a>
-            </div>`;
+            <div id="progressbar-programme" style="user-select: none; -webkit-user-select: none;">
+            <div style="width: 100%; fontSize: 12; color:dimgray; text-align:center; font-weight: bolder;">
+                Complétion du programme
+            </div>
+            </br>
+            <div class="myBar label-center" width="100%" data-value="50" style="width: 100%;"></div>
+            </div>`
+                    : ""}
+            
+            </br>
+            <canvas id="GPAChart" width="250" height="300"></canvas>
+            </br>
+        </div>
+        <div style="font-weight:bold; text-align:right; border-top: 1px solid #bbb;">
+        </br>
+        <a
+            title="Si vous avez aimé mon extension, n'hésitez pas à aller mettre une étoile et partager avec vos amis :)" 
+            target="_blank" 
+            id="linksignetsplugin"
+            href="https://chrome.google.com/webstore/detail/signets-plugin/bgbigmlncgkakhiaokjbhibkednbibpf">
+            SIGNETS plugin
+        </a>
+        </div>`;
 
             const lightenOrDarkenColor = (color, amount) => {
                 return '#' + color.replace(/^#/, '').replace(/../g,
@@ -370,16 +369,16 @@ function gererPageCours() {
 
             let baseColor = theme === "default-theme" ? "#4F7795" : "#B90E1C";
 
-            let dataSets = arg.etatProgrammes.map((p, i) => {
+            let dataSets = etatProgrammes.map((p, i) => {
                 let programColor = lightenOrDarkenColor(baseColor, 75 * i);
-                let GPACumulatifs = arg.etatProgrammes[i].sessions.map((s, j) => {
-                    let sessionsEcoules = arg.etatProgrammes[i].sessions.slice(0, j + 1);
+                let GPACumulatifs = etatProgrammes[i].sessions.map((s, j) => {
+                    let sessionsEcoules = etatProgrammes[i].sessions.slice(0, j + 1);
                     return round2dec(getSum(sessionsEcoules.map(m => m.moyenne * m.credits)) / getSum(sessionsEcoules.map(m => m.credits)));
                 });
 
-                let sigleProgramme = infosProgrammes.find(k => k.code == arg.etatProgrammes[i].code);
+                let sigleProgramme = infosProgrammes.find(k => k.code == etatProgrammes[i].code);
 
-                let label = typeof sigleProgramme !== "undefined" ? sigleProgramme.sigle : arg.etatProgrammes[i].code;
+                let label = typeof sigleProgramme !== "undefined" ? sigleProgramme.sigle : etatProgrammes[i].code;
 
                 return {
                     label: label,
@@ -403,7 +402,7 @@ function gererPageCours() {
                 }
             });
 
-            let labels = [...new Set(arg.etatProgrammes.map((p, i) => arg.etatProgrammes[i].sessions.map(s => s.id)).reverse().flat()), ""];
+            let labels = [...new Set(etatProgrammes.map((p, i) => etatProgrammes[i].sessions.map(s => s.id)).reverse().flat()), ""];
 
             let data = {
                 labels: labels,
@@ -447,7 +446,7 @@ function gererPageCours() {
             });
 
             if (leProgrammeActuelEstConnu) {
-                let pourcentageComplete = round1dec(toPercentage(getSum(arg.etatProgrammes[0].sessions.map(s => s.credits)), infosProgrammes.find(p => p.code === arg.etatProgrammes[0].code).credits));
+                let pourcentageComplete = round1dec(toPercentage(getSum(etatProgrammes[0].sessions.map(s => s.credits)), infosProgrammes.find(p => p.code === etatProgrammes[0].code).credits));
 
                 new ldBar(".myBar", {
                     "stroke": theme === "default-theme" ? "#4F7795" : "#B90E1C",
@@ -459,25 +458,25 @@ function gererPageCours() {
                 });
 
                 injectCSS(
-                /*css*/`
-                .ldBar-label {
-                    color:dimgray;
-                    margin-top:10px;
-                    font-size: 1.15em;
-                    font-weight: bolder;
-                  }
+            /*css*/`
+            .ldBar-label {
+                color:dimgray;
+                margin-top:10px;
+                font-size: 1.15em;
+                font-weight: bolder;
+              }
 
-                  .ldBar path.mainline {
-                    stroke-width: 10;
-                  }
+              .ldBar path.mainline {
+                stroke-width: 10;
+              }
 
-                  .ldBar path.baseline {
-                    stroke-width: 14;
-                    stroke: #f1f2f3;
-                    box-shadow: 20px 20px 20px 20px dimgray;
-                  }
-                  
-                  `);
+              .ldBar path.baseline {
+                stroke-width: 14;
+                stroke: #f1f2f3;
+                box-shadow: 20px 20px 20px 20px dimgray;
+              }
+              
+              `);
             }
 
             document.querySelector('#linksignetsplugin').setAttribute("style", `color:${baseColor}; text-decoration: none;`);
@@ -485,6 +484,12 @@ function gererPageCours() {
             // Régler un bug relié aux menus déroulants qui ne fonctionnent plus quand on ajoute un élément au menu de gauche
             // il faut injecter un script dans la page pour avoir accès à ses fonctions jquery à partir de notre content script qui est isolé
             injectScript(/*javascript*/`$('#menuElem').menu_toggle_adder();`);
+        }
+
+        if (typeof arg.etatProgrammes === 'undefined') {
+            fetchInformationsCheminement(() => { chargerElementsDeGauche(etatProgrammes); });
+        } else {
+            chargerElementsDeGauche(arg.etatProgrammes);
         }
     });
 
@@ -539,7 +544,7 @@ function gererPageCours() {
 
             for (let i = 0, length = rangCentilesCours.length; i < length; i++) {
 
-                if (noteCours[i].innerHTML === "K") noteCours[i].parentNode.setAttribute("style", `background-color: lightblue;`);
+                if (/[KSVZL]/.test(noteCours[i].innerHTML)) noteCours[i].parentNode.setAttribute("style", `background-color: lightblue;`);
 
                 let cle = `${session.innerHTML.replace(/ /g, "")}${siglesCours[i]}`;
 
@@ -1013,5 +1018,27 @@ let infosProgrammes = [
     { sigle: "MEC", code: 7684, credits: 115 },
     { sigle: "GOL", code: 7495, credits: 114 },
     { sigle: "GPA", code: 7485, credits: 117 },
-    { sigle: "GTI", code: 7086, credits: 116 }
+    { sigle: "GTI", code: 7086, credits: 116 },
+    { sigle: "MGA", code: 3235, credits: 45 },
+    { sigle: "MGA", code: 1560, credits: 45 },
+    { sigle: "MPA", code: 3034, credits: 45 },
+    { sigle: "MPA", code: 1566, credits: 45 },
+    { sigle: "MGE", code: 3044, credits: 45 },
+    { sigle: "MGE", code: 1564, credits: 45 },
+    { sigle: "MGC", code: 1544, credits: 45 },
+    { sigle: "MGC", code: 1543, credits: 45 },
+    { sigle: "MTR", code: 3094, credits: 45 },
+    { sigle: "MER", code: 1560, credits: 45 },
+    { sigle: "MEN", code: 1562, credits: 45 },
+    { sigle: "MEN", code: 1561, credits: 45 },
+    { sigle: "MTR", code: 1560, credits: 45 },
+    { sigle: "MTI", code: 1568, credits: 45 },
+    { sigle: "MTI", code: 1567, credits: 45 },
+    { sigle: "MGM", code: 3054, credits: 45 },
+    { sigle: "MGM", code: 3059, credits: 45 },
+    { sigle: "MGL", code: 1822, credits: 45 },
+    { sigle: "MGL", code: 1560, credits: 45 },
+    { sigle: "GTI", code: 7086, credits: 45 },
+    { sigle: "GTI", code: 7086, credits: 45 },
+    { sigle: "GTI", code: 7086, credits: 45 }
 ]
