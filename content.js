@@ -543,6 +543,8 @@ function gererPageCours() {
 
         let uneCoteDeCoursAChange = false;
 
+        let coursNAffectantPasLaMoyenne = [];  //structure : [{cle:cle, programme:code, credits:credits},...]
+
         for (let session of sessions) {
             let rangCentilesCours = Array.from(session.parentNode.nextSibling.querySelectorAll('[aria-describedby*="_columnheader_6"]'));
             let creditsCours = Array.from(session.parentNode.nextSibling.querySelectorAll('[aria-describedby*="_columnheader_4"]'));
@@ -552,8 +554,6 @@ function gererPageCours() {
             let liensCours = Array.from(session.parentNode.nextSibling.querySelectorAll('[aria-describedby*="_columnheader_2"]')).map(x => x.firstElementChild != null ? x.firstElementChild.href : "");
 
             let donneesGraphique = [];  //structure : [[sigle,note,moyenne],[sigle,note,moyenne],...]
-
-            let coursNAffectantPasLaMoyenne = [];  //structure : [{cle:cle, programme:code, credits:credits},...]
 
             for (let i = 0, length = rangCentilesCours.length; i < length; i++) {
 
@@ -567,7 +567,7 @@ function gererPageCours() {
                         theme = arg.theme;
                     }
 
-                    if (typeof arg.coursSansGPA !== 'undefined') {
+                    if (typeof arg.coursSansGPA !== 'undefined' && coursNAffectantPasLaMoyenne.length === 0) {
                         coursNAffectantPasLaMoyenne = arg.coursSansGPA;
                     }
 
@@ -579,7 +579,7 @@ function gererPageCours() {
                         });
                     }
 
-                    if (i == length - 1) {
+                    if (i == length - 1 && session == sessions[sessions.length - 1]) {  //c'est laid mais on doit rester à l'interieur du chrome.storage.sync
                         let creditsSansGPAParProgramme = [];  //structure : [{programme:code, creditsSansGPA:credits},...]
                         let programmes = [...new Set(coursNAffectantPasLaMoyenne.map(c => c.programme))];
                         for (const programme of programmes) {
