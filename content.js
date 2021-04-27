@@ -620,7 +620,7 @@ function gererPageCours() {
 
                     if (typeof arg[cle] !== 'undefined' && !isNaN(parseInt(arg[cle][2]))) {
 
-                        if (arg[cle][4] !== noteCours[i].innerHTML && !noteCours[i].innerHTML.includes("%")) {
+                        if (arg[cle][5] !== noteCours[i].innerHTML && !noteCours[i].innerHTML.includes("%")) {
                             uneCoteDeCoursAChange = true;
                         }
 
@@ -630,8 +630,9 @@ function gererPageCours() {
 
                             obtenirSommaireCours(liensCours[i], true, (fetchedData) => {
 
-                                if (![arg[cle][2], arg[cle][3], arg[cle][0], arg[cle][1]].every((e, i) => e === fetchedData[i]) && !(isNaN(fetchedData[0]) && isNaN(fetchedData[1]))) {
+                                if (![arg[cle][2], arg[cle][3], arg[cle][0], arg[cle][1], arg[cle][4], arg[cle][5]].every((e, i) => e === fetchedData[i]) && !(isNaN(fetchedData[0]) && isNaN(fetchedData[1]))) {
                                     console.log(`notes mises à jour pour ${cle}`);
+
                                     setTabValues(fetchedData[0], fetchedData[1], fetchedData[2], fetchedData[3], fetchedData[4]);
                                     chrome.storage.sync.set({ [cle]: [fetchedData[2], fetchedData[3], fetchedData[0], fetchedData[1], fetchedData[4], fetchedData[5]] });
                                 }
@@ -672,6 +673,11 @@ function gererPageCours() {
                                 thereIsNoData();
                             }
                         }
+                    }
+
+                    if (uneCoteDeCoursAChange && i == length - 1 && session == sessions[sessions.length - 1] && secondRun) {
+                        console.log(`Une cote a changé`);
+                        fetchInformationsCheminement();
                     }
 
                     if (donneesGraphique.some(x => x[1] !== 0 || x[2] !== 0) && !sessionsAvecGraphiqueActive.includes(cle) && i == length - 1) {
@@ -761,10 +767,6 @@ function gererPageCours() {
                 });
             }
 
-        }
-        if (uneCoteDeCoursAChange) {
-            console.log(`Une cote a changé`);
-            fetchInformationsCheminement();
         }
     }
 
