@@ -117,7 +117,7 @@ async function getSourceFromLinkAsync(link, callback) {
 
 function fetchInformationsCheminement() {
 
-    //première requête GET pour obtenir les informations sur le cheminement pour un seul programme 
+    //première requête GET pour obtenir les informations sur le cheminement pour un seul programme
     //ou pour obtenir les arguments nécessaires pour lancer une requête POST et chercher les informations des autres programmes
     getSourceFromLinkAsync("https://signets-ens.etsmtl.ca/Secure/DocEvolutionMoyenne.aspx", (resultatRequete) => {
         console.log(`[Signets Plugin] Mise à jour des informations sur le GPA`);
@@ -157,7 +157,7 @@ function fetchInformationsCheminement() {
         };
 
         const ajouterInformationsCheminement = (data, indexProgramme) => {
-            /* 
+            /*
             // Exemple de ce que la fonction ajoute à état programme
             let structureEtatProgrammes = [
                 {
@@ -219,7 +219,7 @@ function fetchInformationsCheminement() {
         let stringVerificationPlusieursProgrammes = traitementDesDonneesRecues(resultatRequete);
 
         let lignesDeProgrammes = stringVerificationPlusieursProgrammes.filter(e => e.includes("|"));
-        let ilYaPlusieursProgrammes = stringVerificationPlusieursProgrammes.length > 1;
+        let ilYaPlusieursProgrammes = lignesDeProgrammes.length > 1;
 
         if (!ilYaPlusieursProgrammes) { //nous avons déja toute les informations requises
             ajouterInformationsCheminement(stringVerificationPlusieursProgrammes, 0);
@@ -236,9 +236,7 @@ function fetchInformationsCheminement() {
             let eventValidation = encodeURIComponent(getSubstringBetween(resultatRequete, `id="__EVENTVALIDATION" value="`, `" />`));
 
             for (let i = 0, length = codesDeProgrammes.length; i < length; i++) {
-
                 if (i === 0) {      //nous avons déja accès aux informations du programme le plus récent, pas besoin de faire une autre requête pour lui
-
                     ajouterInformationsCheminement(stringVerificationPlusieursProgrammes, 0);
                 } else {
 
@@ -304,7 +302,7 @@ function gererPageCours() {
                 [aria-describedby*="_columnheader_6"]{
                     text-align: center !important;
                 }
-                
+
                 .igtab_Office2010BlueTHContent{
                     overflow:auto!important;
                 }`
@@ -333,7 +331,7 @@ function gererPageCours() {
             fetchInformationsCheminement();
         } else {
             let leProgrammeActuelEstConnu = infosProgrammes.some(p => p.code === arg.etatProgrammes[0].code);
-            
+
             document.querySelector("#ctl00_LoginViewLeftColumn_MenuVertical").innerHTML += /*html*/`
             <div id="elementsAjoutesAGauche" style="transition:opacity 0.25s ease-in-out;">
                 ${leProgrammeActuelEstConnu ? /*html*/`
@@ -346,7 +344,7 @@ function gererPageCours() {
                 <div class="myBar label-center" width="100%" data-value="50" style="width: 100%;"></div>
                 </div>`
                         : ""}
-                
+
                 </br>
                 <canvas id="GPAChart" width="250" height="300"></canvas>
                 </br>
@@ -354,8 +352,8 @@ function gererPageCours() {
             <div style="font-weight:bold; text-align:right; border-top: 1px solid #bbb;">
             </br>
             <a
-                title="Si vous avez aimé mon extension, n'hésitez pas à aller mettre une étoile et partager avec vos amis :)" 
-                target="_blank" 
+                title="Si vous avez aimé mon extension, n'hésitez pas à aller mettre une étoile et partager avec vos amis :)"
+                target="_blank"
                 id="linksignetsplugin"
                 href="https://chrome.google.com/webstore/detail/signets-plugin/bgbigmlncgkakhiaokjbhibkednbibpf">
                 SIGNETS plugin
@@ -476,7 +474,7 @@ function gererPageCours() {
                     stroke: #f1f2f3;
                     box-shadow: 20px 20px 20px 20px dimgray;
                   }
-                  
+
                   `);
             }
 
@@ -610,7 +608,7 @@ function gererPageCours() {
                                 //     } else {
                                 //         thereIsNoData();
                                 //         chrome.storage.sync.set({ [cle]: ["", "white", 0, 0, 0, ""] });
-                                //     } 
+                                //     }
                                 // });
                                 let fetchedData = obtenirSommaireCours(liensCours[i]);
                                 if (!(isNaN(fetchedData[0]) && isNaN(fetchedData[1]))) {
@@ -744,7 +742,7 @@ function gererPageNotes() {
                     border-bottom: 1px solid rgba(0,0,0,0.07);
                     background-color:inherit !important;
                 }
-                
+
                 .igtab_Office2010BlueTHContent{
                     overflow:auto!important;
                 }
@@ -803,8 +801,8 @@ function gererPageNotes() {
     <div style="font-weight:bold; text-align:right; border-top: 1px solid #bbb;">
       </br>
       <a
-         title="Si vous avez aimé mon extension, n'hésitez pas à aller mettre une étoile et partager avec vos amis :)" 
-         target="_blank" 
+         title="Si vous avez aimé mon extension, n'hésitez pas à aller mettre une étoile et partager avec vos amis :)"
+         target="_blank"
          id="linksignetsplugin"
          href="https://chrome.google.com/webstore/detail/signets-plugin/bgbigmlncgkakhiaokjbhibkednbibpf">
            SIGNETS plugin
