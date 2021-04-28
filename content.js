@@ -612,7 +612,7 @@ function gererPageCours() {
                             noteCours[i].innerHTML = noteCours[i].innerHTML.split(" | ")[0];
                         }
 
-                        if (typeof arg.showGrades !== 'undefined' && arg.showGrades === true && noteCours[i].innerHTML !== "" && !/%|\//g.test(noteCours[i].innerHTML)) {
+                        if (typeof arg.showGrades !== 'undefined' && arg.showGrades === true && noteCours[i].innerHTML !== "" && !/%|\/|[SZ]/g.test(noteCours[i].innerHTML)) {
                             noteCours[i].innerHTML += ` | ${note}%`;
                         }
                         donneesGraphique.push([siglesCours[i], note, moyenne ? moyenne : 0]);
@@ -624,7 +624,14 @@ function gererPageCours() {
                             uneCoteDeCoursAChange = true;
                             console.log(`La cote de ${cle} a changé`);
                             obtenirSommaireCours(liensCours[i], true, (fetchedData) => {
-                                chrome.storage.sync.set({ [cle]: [fetchedData[2], fetchedData[3], fetchedData[0], fetchedData[1], fetchedData[4], fetchedData[5]] });
+                                chrome.storage.sync.set({ [cle]: [
+                                    fetchedData[2], 
+                                    fetchedData[3], 
+                                    fetchedData[0], 
+                                    fetchedData[1], 
+                                    fetchedData[4], 
+                                    /[ABCDEF]/.test(noteCours[i].innerHTML) ? fetchedData[5] : noteCours[i].innerHTML
+                                ] });
                             });
                         }
 
