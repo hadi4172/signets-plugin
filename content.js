@@ -75,7 +75,7 @@ function obtenirSommaireCours(link, asynchrone = false, callback = () => { }) {
         let ecartType = getNumber(reformatterNote(getSubstringBetween(resultatRequete, `"ctl00_ContentPlaceHolderMain_lesOnglets_tmpl0_txtEcartType">`, `</span>`)).split("/")[0]);
         let maximum = getNumber(reformatterNote(getSubstringBetween(resultatRequete, `"ctl00_ContentPlaceHolderMain_lesOnglets_tmpl0_txtTotal1">`, `&nbsp;&nbsp;</span>`)).split("/")[1]);
         let rangCentile = getSubstringBetween(resultatRequete, `"ctl00_ContentPlaceHolderMain_lesOnglets_tmpl0_txtRangCentile">`, `</span>`);
-        let coteFinale = getSubstringBetween(resultatRequete, `"ctl00_ContentPlaceHolderMain_lesOnglets_tmpl0_txtCoteFinale">`, `</span>`);
+        let coteFinale = getSubstringBetween(resultatRequete, `"ctl00_ContentPlaceHolderMain_lesOnglets_tmpl0_txtCoteFinale">`, `</span>`).replace(/ /g, "");
 
         let color = getColor(note, moyenne, ecartType, maximum !== 0)
 
@@ -83,12 +83,12 @@ function obtenirSommaireCours(link, asynchrone = false, callback = () => { }) {
     }
 
     if (!asynchrone) {
-        resultatRequete = getSubstringBetween(getSourceFromLink(link), `Sommaire du cours-groupe`, `Cote au dossier`);
+        resultatRequete = getSubstringBetween(getSourceFromLink(link), `Sommaire du cours-groupe`, `Périodes d'abandon`);
         if (resultatRequete === "Error") return [NaN, NaN, "&nbsp;", "white", NaN, ""];
         return decomposerResultat(resultatRequete);
     } else {
         getSourceFromLinkAsync(link, (resultText) => {
-            let resultatRequete = getSubstringBetween(resultText, `Sommaire du cours-groupe`, `Cote au dossier`);
+            let resultatRequete = getSubstringBetween(resultText, `Sommaire du cours-groupe`, `Périodes d'abandon`);
             if (resultatRequete !== "Error") callback(decomposerResultat(resultatRequete));
             else callback([NaN, NaN, "&nbsp;", "white", NaN, ""]);
         });
@@ -622,6 +622,10 @@ function gererPageCours() {
 
                         if (arg[cle][5] !== noteCours[i].innerHTML && !noteCours[i].innerHTML.includes("%")) {
                             uneCoteDeCoursAChange = true;
+                            console.log(`La cote de ${cle} a changé`);
+                            obtenirSommaireCours(liensCours[i], true, (fetchedData) => {
+                                chrome.storage.sync.set({ [cle]: [fetchedData[2], fetchedData[3], fetchedData[0], fetchedData[1], fetchedData[4], fetchedData[5]] });
+                            });
                         }
 
                         setTabValues(arg[cle][2], arg[cle][3], arg[cle][0], arg[cle][1], arg[cle][4]);
@@ -675,7 +679,7 @@ function gererPageCours() {
                         }
                     }
 
-                    if (uneCoteDeCoursAChange && i == length - 1 && session == sessions[sessions.length - 1] && secondRun) {
+                    if (uneCoteDeCoursAChange && i == length - 1 && session == sessions[sessions.length - 1]) {
                         console.log(`Une cote a changé`);
                         fetchInformationsCheminement();
                     }
@@ -880,10 +884,17 @@ function gererPageNotes() {
                 round1dec(toPercentage(valNoteTotale, denominateurTotal)),
                 round1dec(toPercentage(valMoyTotale, denominateurTotal)),
                 round1dec(denominateurTotal),
-                coteFinale.innerHTML
+                coteFinale.innerHTML.replace(/ /g, "")
             ]
         });
-        // console.log(`saved:`, `${session + cours}: ${[rangCentileTotal.innerHTML, noteTotale.style.backgroundColor, `${Math.round(valNoteTotale / denominateurTotal * 100)}%`]}`);
+        console.log(`saved:`, `${session + cours}:`, [
+            rangCentileTotal.innerHTML,
+            noteTotale.style.backgroundColor,
+            round1dec(toPercentage(valNoteTotale, denominateurTotal)),
+            round1dec(toPercentage(valMoyTotale, denominateurTotal)),
+            round1dec(denominateurTotal),
+            coteFinale.innerHTML.replace(/ /g, "")
+        ] );
     }
 
     for (let i = 0; i < notesGrp.length; i++) {
