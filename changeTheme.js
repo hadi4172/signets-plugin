@@ -23,7 +23,8 @@ chrome.storage.sync.get('theme', function (arg) {
   } else if (arg.theme === 'pavillon-e-2-theme') {
     injectCSS( /*css*/ `
         #etsBellowHeader {
-          background-image: url(${chrome.runtime.getURL('assets/pavillonE2.png')}) !important;
+          background-image: url(${chrome.runtime.getURL('assets/pavillonE2.svg')}) !important;
+          background-size: cover!important;
           background-repeat: repeat;
         }
 

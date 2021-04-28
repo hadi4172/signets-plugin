@@ -365,6 +365,8 @@ function gererPageCours() {
 
             let baseColor = theme === "default-theme" ? "#4F7795" : "#B90E1C";
 
+            let labels = [...new Set(etatProgrammes.map((p, i) => etatProgrammes[i].sessions.map(s => s.id)).reverse().flat()), ""];
+
             let dataSets = etatProgrammes.map((p, i) => {
                 let programColor = lightenOrDarkenColor(baseColor, 75 * i);
                 let GPACumulatifs = etatProgrammes[i].sessions.map((s, j) => {
@@ -401,14 +403,15 @@ function gererPageCours() {
                 }
             });
 
-            let labels = [...new Set(etatProgrammes.map((p, i) => etatProgrammes[i].sessions.map(s => s.id)).reverse().flat()), ""];
-
             let data = {
                 labels: labels,
                 datasets: dataSets.reverse()
             };
 
             let options = {
+                hover: {
+                    mode: 'nearest'
+                },
                 scales: {
                     yAxes: [{
                         ticks: {
@@ -428,7 +431,14 @@ function gererPageCours() {
                             labelString: 'Session',
                             fontSize: 11.5
                         }
-                    }],
+                    }]
+                },
+                tooltips: {
+                    callbacks: {
+                        title: function (tooltipItems, data) {
+                            return data.datasets[tooltipItems[0].datasetIndex].data[tooltipItems[0].index].x;
+                        }
+                    }
                 },
                 title: {
                     display: true,
@@ -624,14 +634,16 @@ function gererPageCours() {
                             uneCoteDeCoursAChange = true;
                             console.log(`La cote de ${cle} a changé`);
                             obtenirSommaireCours(liensCours[i], true, (fetchedData) => {
-                                chrome.storage.sync.set({ [cle]: [
-                                    fetchedData[2], 
-                                    fetchedData[3], 
-                                    fetchedData[0], 
-                                    fetchedData[1], 
-                                    fetchedData[4], 
-                                    /[ABCDEF]/.test(noteCours[i].innerHTML) ? fetchedData[5] : noteCours[i].innerHTML
-                                ] });
+                                chrome.storage.sync.set({
+                                    [cle]: [
+                                        fetchedData[2],
+                                        fetchedData[3],
+                                        fetchedData[0],
+                                        fetchedData[1],
+                                        fetchedData[4],
+                                        /[ABCDEF]/.test(noteCours[i].innerHTML) ? fetchedData[5] : noteCours[i].innerHTML
+                                    ]
+                                });
                             });
                         }
 
@@ -901,7 +913,7 @@ function gererPageNotes() {
             round1dec(toPercentage(valMoyTotale, denominateurTotal)),
             round1dec(denominateurTotal),
             coteFinale.innerHTML.replace(/ /g, "")
-        ] );
+        ]);
     }
 
     for (let i = 0; i < notesGrp.length; i++) {
