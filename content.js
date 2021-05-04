@@ -614,9 +614,14 @@ function gererPageCours() {
 
                         noteCours[i].style.whiteSpace = "nowrap";
 
-                        if (noteCours[i].innerHTML === "" && color !== "white" && note) noteCours[i].innerHTML = arg.preciseGrades === true ?
-                            `${note}%×${denominator}`
-                            : `${note}%`;
+                        if ((noteCours[i].innerHTML === "" ||
+                            parseFloat(noteCours[i].innerHTML.split("%")[0]) !== note || 
+                            ( arg.preciseGrades && parseFloat(noteCours[i].innerHTML.split("×")[1]) !== denominator))
+                            && color !== "white"
+                            && note)
+                            noteCours[i].innerHTML = arg.preciseGrades === true ?
+                                `${note}%×${denominator}`
+                                : `${note}%`;
 
                         if (/%|\//g.test(noteCours[i].innerHTML) && `${note}%` !== noteCours[i].innerHTML.split(" | ")[1]) {
                             noteCours[i].innerHTML = noteCours[i].innerHTML.split(" | ")[0];
