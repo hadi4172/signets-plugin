@@ -1,15 +1,13 @@
 let etatProgrammes = [];
+let titreDeLaPage = "";
+let requetesEnCours = [];
 
 window.onload = () => {
-    // =========================================================================
-    // Interface notes
-    // =========================================================================
+    titreDeLaPage = document.title;
+
     if (window.location.href.includes(`signets-ens.etsmtl.ca/Secure/DetailsCoursGroupe`)) {
         gererPageNotes();
 
-        // =====================================================================
-        // Interface cours
-        // =====================================================================
     } else if (["https://signets-ens.etsmtl.ca/Secure/MesNotes.aspx", "https://signets-ens.etsmtl.ca/"].includes(window.location.href)) {
         gererPageCours();
     }
@@ -97,21 +95,39 @@ function obtenirSommaireCours(link, asynchrone = false, callback = () => { }) {
 }
 
 function getSourceFromLink(link) {
+    requetesEnCours.push(link);
+    document.title = "Chargement...";
+
     let r = new XMLHttpRequest();
 
     r.open('GET', link, false);
     r.send(null);
     if (r.status == 200) {
+        requetesEnCours = requetesEnCours.filter(l => l !== link); 
+        if(requetesEnCours.length === 0) document.title = titreDeLaPage;
+
         return minifyHTML(r.responseText);
     } else {
+        requetesEnCours = requetesEnCours.filter(l => l !== link); 
+        if(requetesEnCours.length === 0) document.title = titreDeLaPage;
+
         return "Error";
     }
 }
 
 async function getSourceFromLinkAsync(link, callback) {
+    requetesEnCours.push(link);
+    document.title = "Chargement...";
+
     let response = await fetch(link);
     if (response.status == 200) {
         callback(await response.text());
+
+        requetesEnCours = requetesEnCours.filter(l => l !== link); 
+        if(requetesEnCours.length === 0) document.title = titreDeLaPage;
+    } else {
+        requetesEnCours = requetesEnCours.filter(l => l !== link); 
+        if(requetesEnCours.length === 0) document.title = titreDeLaPage;
     }
 }
 
@@ -615,9 +631,11 @@ function gererPageCours() {
                         noteCours[i].style.whiteSpace = "nowrap";
 
                         if ((noteCours[i].innerHTML === "" ||
-                            parseFloat(noteCours[i].innerHTML.split("%")[0]) !== note || 
-                            ( arg.preciseGrades && parseFloat(noteCours[i].innerHTML.split("×")[1]) !== denominator))
+                            parseFloat(noteCours[i].innerHTML.split("%")[0]) !== note ||
+                            (typeof noteCours[i].innerHTML.split("×")[1] !== "undefined" &&
+                                parseFloat(noteCours[i].innerHTML.split("×")[1]) !== denominator))
                             && color !== "white"
+                            && !/[A-Z]/.test(noteCours[i].innerHTML)
                             && note)
                             noteCours[i].innerHTML = arg.preciseGrades === true ?
                                 `${note}%×${denominator}`
