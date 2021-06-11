@@ -1004,8 +1004,8 @@ function gererPageNotes() {
     // console.log(`donneesGraphique:`, donneesGraphique);
 
     const injecterGraphiqueDistribution = (elementHote, moyenne, ecartType, theme) => { //FIXME moyenne doit être donnée en pourcentage
-        console.log(`ecartType`, ecartType);
-        console.log(`moyenne`, moyenne);
+        // console.log(`ecartType`, ecartType);
+        // console.log(`moyenne`, moyenne);
         moyenne /= 100;
         ecartType /= 100;
 
@@ -1044,7 +1044,7 @@ function gererPageNotes() {
                 backgroundColor: theme.courbe,
                 pointRadius: 0,
                 showLine: true,
-                fill: false,
+                fill: true,
             },
             {
                 label: "Votre moyenne",
@@ -1091,7 +1091,7 @@ function gererPageNotes() {
             },
             tooltips: {
                 mode: 'index',
-                intersect: true,
+                intersect: false,
                 callbacks: {
                     title: (tooltipItems, data) => {
                         return round1dec(data.datasets[tooltipItems[0].datasetIndex].data[tooltipItems[0].index].x) + "%";
@@ -1131,7 +1131,7 @@ function gererPageNotes() {
                     {
                         value: round2dec(toPercentage(valNoteTotale, denominateurTotal)),
                         borderWidth: 3,
-                        borderColor: theme.note
+                        borderColor: theme.note 
                     },
                     {
                         value: toPercentage((valMoyTotale - valEcartTypeTotal), denominateurTotal) > 0 ?
@@ -1300,10 +1300,10 @@ function gererPageNotes() {
                 round2dec(toPercentage(valMoyTotale, denominateurTotal)),
                 round2dec(toPercentage(valEcartTypeTotal, denominateurTotal)),
                 {
-                    courbe: lightenOrDarkenColor(theme === "default-theme" ? "#4F7795" : "#B90E1C", 40),
-                    note: theme === "default-theme" ? "#4F7795" : "#B90E1C",
-                    moyenne: "gray",
-                    ecartType: "rgba(128, 128, 128, 0.7)"
+                    note: lightenOrDarkenColor(theme === "default-theme" ? "#4F7795" : "#B90E1C", 100),
+                    courbe: theme === "default-theme" ? "#4F7795" : "#B90E1C",
+                    moyenne: "lightgray",
+                    ecartType: "whitesmoke"
                 });
         }
 
