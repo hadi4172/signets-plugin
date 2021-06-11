@@ -55,6 +55,12 @@ function roundToXDec(num, decimals) { return Math.round((num + Number.EPSILON) *
 function round1dec(num) { return roundToXDec(num, 1); }
 function round2dec(num) { return roundToXDec(num, 2); }
 
+function lightenOrDarkenColor(color, amount) {
+    return '#' + color.replace(/^#/, '').replace(/../g,
+        color => ('0' + Math.min(255, Math.max(0, parseInt(color, 16) + amount))
+            .toString(16)).substr(-2));
+}
+
 function getSum(arr) { return arr.reduce((a, b) => a + b, 0); }
 
 function getSubstringBetween(s, a, b, last = false) {
@@ -103,13 +109,13 @@ function getSourceFromLink(link) {
     r.open('GET', link, false);
     r.send(null);
     if (r.status == 200) {
-        requetesEnCours = requetesEnCours.filter(l => l !== link); 
-        if(requetesEnCours.length === 0) document.title = titreDeLaPage;
+        requetesEnCours = requetesEnCours.filter(l => l !== link);
+        if (requetesEnCours.length === 0) document.title = titreDeLaPage;
 
         return minifyHTML(r.responseText);
     } else {
-        requetesEnCours = requetesEnCours.filter(l => l !== link); 
-        if(requetesEnCours.length === 0) document.title = titreDeLaPage;
+        requetesEnCours = requetesEnCours.filter(l => l !== link);
+        if (requetesEnCours.length === 0) document.title = titreDeLaPage;
 
         return "Error";
     }
@@ -123,11 +129,11 @@ async function getSourceFromLinkAsync(link, callback) {
     if (response.status == 200) {
         callback(await response.text());
 
-        requetesEnCours = requetesEnCours.filter(l => l !== link); 
-        if(requetesEnCours.length === 0) document.title = titreDeLaPage;
+        requetesEnCours = requetesEnCours.filter(l => l !== link);
+        if (requetesEnCours.length === 0) document.title = titreDeLaPage;
     } else {
-        requetesEnCours = requetesEnCours.filter(l => l !== link); 
-        if(requetesEnCours.length === 0) document.title = titreDeLaPage;
+        requetesEnCours = requetesEnCours.filter(l => l !== link);
+        if (requetesEnCours.length === 0) document.title = titreDeLaPage;
     }
 }
 
@@ -373,12 +379,6 @@ function gererPageCours() {
         </a>
         </div>`;
 
-            const lightenOrDarkenColor = (color, amount) => {
-                return '#' + color.replace(/^#/, '').replace(/../g,
-                    color => ('0' + Math.min(255, Math.max(0, parseInt(color, 16) + amount))
-                        .toString(16)).substr(-2));
-            };
-
             let baseColor = theme === "default-theme" ? "#4F7795" : "#B90E1C";
 
             let labels = [...new Set(etatProgrammes.map((p, i) => etatProgrammes[i].sessions.map(s => s.id)).reverse().flat()), ""];
@@ -437,7 +437,7 @@ function gererPageCours() {
                         },
                         scaleLabel: {
                             display: true,
-                            labelString: 'GPA cumulatif',
+                            labelString: 'Cote cumulative',
                             fontSize: 12
                         }
                     }],
@@ -460,7 +460,7 @@ function gererPageCours() {
                     display: true,
                     padding: 3,
                     fontSize: 12,
-                    text: 'Évolution de votre GPA'
+                    text: 'Évolution de votre cote'
                 }
             };
 
@@ -587,7 +587,7 @@ function gererPageCours() {
 
                 let cle = `${session.innerHTML.replace(/ /g, "")}${siglesCours[i]}`;
 
-                chrome.storage.sync.get([cle, 'theme', 'showGrades', 'preciseGrades', 'coursSansGPA'], function (arg) {
+                chrome.storage.sync.get([cle, 'theme', 'showGrades', 'preciseGrades', 'coursSansGPA', 'gpaInNumber'], function (arg) {
                     let theme = "default-theme";
                     if (typeof arg.theme !== 'undefined') {
                         theme = arg.theme;
@@ -635,11 +635,16 @@ function gererPageCours() {
                             (typeof noteCours[i].innerHTML.split("×")[1] !== "undefined" &&
                                 parseFloat(noteCours[i].innerHTML.split("×")[1]) !== denominator))
                             && color !== "white"
-                            && !/[A-Z]/.test(noteCours[i].innerHTML)
+                            && !/[A-Z]|‎/.test(noteCours[i].innerHTML)  //il y a un caractère invisible ici
                             && note)
                             noteCours[i].innerHTML = arg.preciseGrades === true ?
                                 `${note}%×${denominator}`
                                 : `${note}%`;
+
+                        let equivalentCote = infosCotes.find(c => noteCours[i].innerHTML.includes(c.lettre));
+                        if (typeof equivalentCote !== "undefined" && arg.gpaInNumber === true) {
+                            noteCours[i].innerHTML = equivalentCote.nombre.toFixed(1).replace(/\./,".‎");   //il y a un caractère invisible ici
+                        }
 
                         if (/%|\//g.test(noteCours[i].innerHTML) && `${note}%` !== noteCours[i].innerHTML.split(" | ")[1]) {
                             noteCours[i].innerHTML = noteCours[i].innerHTML.split(" | ")[0];
@@ -864,6 +869,16 @@ function gererPageNotes() {
         }
     });
 
+    injectCSS(/*css*/`
+        [aria-describedby="grilleNotes_columnheader_4"]{
+            width:45px!important;
+        }
+        
+        [aria-describedby="grilleNotes_columnheader_1"]{
+            width:20px!important;
+        }
+    `)
+
     let session = document.querySelector('#ctl00_ContentPlaceHolderMain_txtTrimestre1').innerHTML.replace(/ /g, "");
     let cours = document.querySelector('#ctl00_ContentPlaceHolderMain_txtSigle1').innerHTML;
 
@@ -887,6 +902,7 @@ function gererPageNotes() {
     let valNoteTotale = getNumber(reformatterNote(noteTotale.innerHTML).split("/")[0]);
     let denominateurTotal = getNumber(reformatterNote(noteTotale.innerHTML).split("/")[1]);
     let valMoyTotale = getNumber(reformatterNote(noteGrpTotal.innerHTML).split("/")[0]);
+    let valEcartTypeTotal = getNumber(ecartTypeTotal.innerHTML);
     let rangCentileTotal = document.querySelector('#ctl00_ContentPlaceHolderMain_lesOnglets_tmpl0_txtRangCentile');
     let coteFinale = document.querySelector('#ctl00_ContentPlaceHolderMain_lesOnglets_tmpl0_txtCoteFinale');
 
@@ -895,6 +911,21 @@ function gererPageNotes() {
     document.querySelector("#ctl00_LoginViewLeftColumn_MenuVertical").innerHTML += /*html*/`
     </br>
     <canvas id="myChart" width="250" height="290"></canvas>
+    </br>
+    <div style="padding:3px;font-size: 16px; width:100%; text-align:center;"
+    >
+    <a
+        style="font-weight:bold; color:dimgray; text-decoration: none;"
+        target="_blank"
+        href="https://en.wikipedia.org/wiki/Beta_distribution"
+    >
+        Densité de probabilité Bêta
+    </a>
+    </div>
+    ${denominateurTotal >= 15 ?
+    /*html*/`<canvas id="distributionBeta" width="250" height="275"></canvas>`
+            :/*html*/`<div style="margin:5px 5px 5px 20px;">Le graphique sera affiché quand au moins 15% des points seront notés</div>`
+        }
     </br>
     <div style="font-weight:bold; text-align:right; border-top: 1px solid #bbb;">
       </br>
@@ -971,6 +1002,164 @@ function gererPageNotes() {
     }
 
     // console.log(`donneesGraphique:`, donneesGraphique);
+
+    const injecterGraphiqueDistribution = (elementHote, moyenne, ecartType, theme) => { //FIXME moyenne doit être donnée en pourcentage
+        console.log(`ecartType`, ecartType);
+        console.log(`moyenne`, moyenne);
+        moyenne /= 100;
+        ecartType /= 100;
+
+        let a = (-Math.pow(moyenne, 3) + Math.pow(moyenne, 2) - moyenne * Math.pow(ecartType, 2)) / Math.pow(ecartType, 2);
+        let b = ((moyenne - 1) * (Math.pow(moyenne, 2) - moyenne + Math.pow(ecartType, 2))) / Math.pow(ecartType, 2);
+
+        // let beta = Math.sqrt(2 * Math.PI) * (Math.pow(a, a - 0.5) * Math.pow(b, b - 0.5)) / (Math.pow(a + b, a + b - 0.5));
+
+        // const betaFunction = (x) => (Math.pow(x, a - 1) * Math.pow(1 - x, b - 1)) / (beta);
+
+        /* source : https://github.com/royhzq/betajs */
+        const betaFunction = x => {
+            const lnBetaFunc = (a, b) => {
+                let result = 0.0;
+                for (let i = 0; i < a - 2; i++) result += Math.log(a - 1 - i);
+                for (let i = 0; i < b - 2; i++) result += Math.log(b - 1 - i);
+                for (let i = 0; i < a + b - 2; i++) result -= Math.log(a + b - 1 - i);
+
+                return result
+            };
+            const lnBetaPDF = (x, a, b) => ((a - 1) * Math.log(x) + (b - 1) * Math.log(1 - x) - lnBetaFunc(a, b));
+
+            return Math.exp(lnBetaPDF(x, a, b))
+        };
+        /* fin citation */
+
+        let values = [...Array(101).keys()].map(x => ({ x: x, y: betaFunction(x / 100) }));
+
+        let data = {
+            // labels: [...Array(101).keys()],
+            datasets: [{
+                label: "Densité de probabilité", // Name it as you want
+                // function: (x) => (Math.pow(x, a - 1) * Math.pow(1 - x, b - 1)) / (beta),
+                data: values, // Don't forget to add an empty data array, or else it will break
+                borderColor: theme.courbe,
+                backgroundColor: theme.courbe,
+                pointRadius: 0,
+                showLine: true,
+                fill: false,
+            },
+            {
+                label: "Votre moyenne",
+                data: [],
+                borderColor: theme.note,
+                fill: false
+            },
+            {
+                label: "Moy. du groupe",
+                data: [],
+                borderColor: theme.moyenne,
+                fill: false
+            },
+            {
+                label: "Écart type",
+                data: [],
+                borderColor: theme.ecartType,
+                fill: false
+            }
+            ]
+        }
+
+        let options = {
+            scales: {
+                yAxes: [{
+                    scaleLabel: {
+                        display: true,
+                        labelString: "Densité estimée d'étudiants en %",
+                        fontSize: 12
+                    }
+                }],
+                xAxes: [{
+                    ticks: {
+                        min: 0,
+                        max: 100,
+                        stepSize: 20,
+                    },
+                    scaleLabel: {
+                        display: true,
+                        labelString: "Note de l'étudiant en %",
+                        fontSize: 11.5
+                    }
+                }],
+            },
+            tooltips: {
+                mode: 'index',
+                intersect: true,
+                callbacks: {
+                    title: (tooltipItems, data) => {
+                        return round1dec(data.datasets[tooltipItems[0].datasetIndex].data[tooltipItems[0].index].x) + "%";
+                    },
+                    label: (tooltipItem, data) => {
+                        let index = tooltipItem.index;
+                        let datasetIndex = tooltipItem.datasetIndex;
+                        // let label = data.datasets[tooltipItem.datasetIndex].label || '';
+                        let value = data.datasets[datasetIndex].data[index];
+                        return round2dec(value.y) + "%";
+                    }
+                }
+            },
+            // title: {
+            //     display: true,
+            //     padding: 3,
+            //     fontSize: 14.5,
+            //     text: 'Densité de probabilité des notes'
+            // },
+            legend: {
+                labels: {
+                    boxWidth: 20,
+                    filter: function (legendItem, chartData) {
+                        return legendItem.datasetIndex !== 0;
+                        // return true or false based on legendItem's datasetIndex (legendItem.datasetIndex)
+                    }
+                }
+            },
+            annotation: {
+                drawTime: "afterDatasetsDraw",
+                annotations: [
+                    {
+                        value: round2dec(toPercentage(valMoyTotale, denominateurTotal)),
+                        borderWidth: 2,
+                        borderColor: theme.moyenne,
+                    },
+                    {
+                        value: round2dec(toPercentage(valNoteTotale, denominateurTotal)),
+                        borderWidth: 3,
+                        borderColor: theme.note
+                    },
+                    {
+                        value: toPercentage((valMoyTotale - valEcartTypeTotal), denominateurTotal) > 0 ?
+                            round2dec(toPercentage(valMoyTotale - valEcartTypeTotal, denominateurTotal)) : undefined,
+                        borderWidth: 1,
+                        borderColor: theme.ecartType,
+                    },
+                    {
+                        value: toPercentage((valMoyTotale + valEcartTypeTotal), denominateurTotal) < 100 ?
+                            round2dec(toPercentage(valMoyTotale + valEcartTypeTotal, denominateurTotal)) : undefined,
+                        borderWidth: 1,
+                        borderColor: theme.ecartType,
+                    }
+                ].map(e => ({
+                    type: "line",
+                    mode: "vertical",
+                    scaleID: "x-axis-1",
+                    ...e
+                }))
+            }
+        };
+
+        new Chart(elementHote, {
+            type: 'scatter',
+            data: data,
+            options: options
+        });
+    }
 
     let donneesGraphiqueNotes = donneesGraphique.map((x, i) => {
         let pourcentageNote = getSum(donneesGraphique.map(x2 => x2[2]).slice(0, i + 1));
@@ -1067,6 +1256,11 @@ function gererPageNotes() {
                     }
                 }],
             },
+            legend: {
+                labels: {
+                    boxWidth: 15,
+                }
+            },
             tooltips: {
                 mode: 'index',
                 intersect: true,
@@ -1099,6 +1293,19 @@ function gererPageNotes() {
             data: data,
             options: options
         });
+
+        if (denominateurTotal >= 15) {
+            injecterGraphiqueDistribution(
+                document.getElementById('distributionBeta'),
+                round2dec(toPercentage(valMoyTotale, denominateurTotal)),
+                round2dec(toPercentage(valEcartTypeTotal, denominateurTotal)),
+                {
+                    courbe: lightenOrDarkenColor(theme === "default-theme" ? "#4F7795" : "#B90E1C", 40),
+                    note: theme === "default-theme" ? "#4F7795" : "#B90E1C",
+                    moyenne: "gray",
+                    ecartType: "rgba(128, 128, 128, 0.7)"
+                });
+        }
 
         document.querySelector('#linksignetsplugin').setAttribute("style", `color:${theme === "default-theme" ? "#4F7795" : "#B90E1C"}; text-decoration: none;`);
     });
@@ -1139,4 +1346,19 @@ let infosProgrammes = [
     { sigle: "MGM", code: 3059, credits: 45 },
     { sigle: "MGL", code: 1822, credits: 45 },
     { sigle: "MGL", code: 1560, credits: 45 }
-]
+];
+
+let infosCotes = [
+    { lettre: "A+", nombre: 4.3 },
+    { lettre: "A-", nombre: 3.7 },
+    { lettre: "A", nombre: 4 },
+    { lettre: "B+", nombre: 3.3 },
+    { lettre: "B-", nombre: 2.7 },
+    { lettre: "B", nombre: 3 },
+    { lettre: "C+", nombre: 2.3 },
+    { lettre: "C-", nombre: 1.7 },
+    { lettre: "C", nombre: 2 },
+    { lettre: "D+", nombre: 1.3 },
+    { lettre: "D", nombre: 1 },
+    { lettre: "E", nombre: 0 }
+];

@@ -1,13 +1,19 @@
 window.onload = function () {
     let checkboxNoColors = document.querySelector("#disablecolors");
+    let checkboxGPAInNumber = document.querySelector("#gpainnumber");
     let checkboxShowGrades = document.querySelector("#alwaysshowgrades");
     let checkboxPreciseGrades = document.querySelector("#precisegrades");
     let radioThemes = Array.from(document.querySelectorAll('[name="theme"]'));
 
-    chrome.storage.sync.get(['noColors', 'showGrades', 'theme', 'preciseGrades'], function (arg) {
+    chrome.storage.sync.get(['noColors', 'showGrades', 'theme', 'preciseGrades', 'gpaInNumber'], function (arg) {
         checkboxNoColors.checked = false;
         if (typeof arg.noColors !== 'undefined') {
             if (arg.noColors === true) checkboxNoColors.checked = true;
+        }
+
+        checkboxGPAInNumber.checked = false;
+        if (typeof arg.gpaInNumber !== 'undefined') {
+            if (arg.gpaInNumber === true) checkboxGPAInNumber.checked = true;
         }
 
         checkboxShowGrades.checked = false;
@@ -32,6 +38,10 @@ window.onload = function () {
     });
     checkboxNoColors.addEventListener("click", function () {
         chrome.storage.sync.set({ noColors: checkboxNoColors.checked });
+    });
+
+    checkboxGPAInNumber.addEventListener("click", function () {
+        chrome.storage.sync.set({ gpaInNumber: checkboxGPAInNumber.checked });
     });
 
     checkboxShowGrades.addEventListener("click", function () {
