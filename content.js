@@ -917,7 +917,7 @@ function gererPageNotes() {
     <a
         style="font-weight:bold; color:dimgray; text-decoration: none;"
         target="_blank"
-        href="https://en.wikipedia.org/wiki/Beta_distribution"
+        href="https://en.wikipedia.org/wiki/Probability_density_function"
     >
         Densité de probabilité Bêta
     </a>
@@ -1003,7 +1003,7 @@ function gererPageNotes() {
 
     // console.log(`donneesGraphique:`, donneesGraphique);
 
-    const injecterGraphiqueDistribution = (elementHote, moyenne, ecartType, theme) => { //FIXME moyenne doit être donnée en pourcentage
+    const injecterGraphiqueDistribution = (elementHote, moyenne, ecartType, theme) => {
         // console.log(`ecartType`, ecartType);
         // console.log(`moyenne`, moyenne);
         moyenne /= 100;
@@ -1041,6 +1041,7 @@ function gererPageNotes() {
                 // function: (x) => (Math.pow(x, a - 1) * Math.pow(1 - x, b - 1)) / (beta),
                 data: values, // Don't forget to add an empty data array, or else it will break
                 borderColor: theme.courbe,
+                borderWidth:0.1,
                 backgroundColor: theme.courbe,
                 pointRadius: 0,
                 showLine: true,
