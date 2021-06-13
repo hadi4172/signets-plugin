@@ -1315,6 +1315,22 @@ function gererPageNotes() {
                 padding: 3,
                 fontSize: 16,
                 text: 'Évolution de votre moyenne'
+            },
+            annotation: {
+                drawTime: "afterDatasetsDraw",
+                annotations: [
+                    {
+                        value: 50,
+                        borderWidth: 1,
+                        borderColor: "dimgray"
+                    },
+                
+                ].map(e => ({
+                    type: "line",
+                    mode: "horizontal",
+                    scaleID: "y-axis-1",
+                    ...e
+                }))
             }
         };
 
