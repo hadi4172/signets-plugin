@@ -73,7 +73,7 @@ function integrate(f, a, b) {
         let x1 = a + i * dx;
         let ai = dx * (f(x0) + f(x1)) / 2.;
 
-        area = area + ai
+        area += ai;
     }
     return area;
 }
@@ -927,14 +927,14 @@ function gererPageNotes() {
     </br>
     <canvas id="myChart" width="250" height="290"></canvas>
     </br>
-    <div style="padding:3px;font-size: 16px; width:100%; text-align:center;"
+    <div style="padding:3px;font-size: 15.5px; width:100%; text-align:center;"
     >
     <a
         style="font-weight:bold; color:dimgray; text-decoration: none;"
         target="_blank"
         href="https://en.wikipedia.org/wiki/Probability_density_function"
     >
-        Densité de probabilité Bêta
+        Distribution estimée des notes
     </a>
     </div>
     ${denominateurTotal >= 15 ?
@@ -1054,36 +1054,35 @@ function gererPageNotes() {
         let values = [...Array(101).keys()].map(x => ({ x: x, y: betaFunction(x / 100) }));
         let integratedValues = [...Array(101).keys()].map(x => ({ x: x, y: integrate(betaFunction, 0, x / 100) }));
 
+        let datasets = [
+            values.filter(e => e.x / 100 < moyenne - ecartType),
+            values.filter(e => e.x / 100 < moyenne && e.x / 100 >= moyenne - ecartType),
+            values.filter(e => e.x / 100 > moyenne && e.x / 100 <= moyenne + ecartType),
+            values.filter(e => e.x / 100 > moyenne + ecartType)
+        ];
+
+        datasets = datasets.map(e => typeof e[0] !== "undefined" ? [...[...Array(e[0].x).keys()].map(s => null), ...e] : e);
+        let datasetsColors = ["lightcoral", "lightpink", "lightgreen", "limegreen"];
+
         let data = {
             // labels: [...Array(101).keys()],
-            datasets: [{
-                label: "Densité de probabilité",
-                data: values,
-                borderColor: theme.courbe,
-                borderWidth: 0.1,
-                backgroundColor: theme.courbe,
-                pointRadius: 0,
-                showLine: true,
-                fill: true,
-            },
-            {
-                label: "Votre moyenne",
-                data: [],
-                borderColor: theme.note,
-                fill: false
-            },
-            {
-                label: "Moy. du groupe",
-                data: [],
-                borderColor: theme.moyenne,
-                fill: false
-            },
-            {
-                label: "Écart type",
-                data: [],
-                borderColor: theme.ecartType,
-                fill: false
-            }
+            datasets: [
+                ...datasets.map((e, i) => ({
+                    label: "Densité de probabilité",
+                    data: e,
+                    borderColor: datasetsColors[i],
+                    borderWidth: 0.1,
+                    backgroundColor: datasetsColors[i],
+                    pointRadius: 0,
+                    showLine: true,
+                    fill: true,
+                })),
+                {
+                    label: "Votre moyenne",
+                    data: [],
+                    borderColor: theme.note,
+                    fill: false
+                },
             ]
         }
 
@@ -1092,7 +1091,7 @@ function gererPageNotes() {
                 yAxes: [{
                     scaleLabel: {
                         display: true,
-                        labelString: "Densité estimée d'étudiants en %",
+                        labelString: "Densité d'étudiants en %",
                         fontSize: 12
                     }
                 }],
@@ -1109,6 +1108,9 @@ function gererPageNotes() {
                     }
                 }],
             },
+            // hover: {
+            //     mode: 'single'
+            // },
             tooltips: {
                 mode: 'index',
                 intersect: false,
@@ -1116,18 +1118,20 @@ function gererPageNotes() {
                 callbacks: {
                     title: (tooltipItems, data) => {
                         return round1dec(data.datasets[tooltipItems[0].datasetIndex].data[tooltipItems[0].index].x) + "%";
+
+                        // return round1dec(data.datasets[tooltipItems[tooltipItems.length - 1].datasetIndex].data[tooltipItems[0].xLabel].x) + "%";
                     },
                     label: (tooltipItem, data) => {
-                        let index = tooltipItem.index;
-                        let datasetIndex = tooltipItem.datasetIndex;
+                        // let index = tooltipItem.index;
+                        // let datasetIndex = tooltipItem.datasetIndex;
                         // let label = data.datasets[tooltipItem.datasetIndex].label || '';
-                        let value = data.datasets[datasetIndex].data[index];
+                        // let value = data.datasets[datasetIndex].data[index];
 
-                        return "Valeur: " + round2dec(value.y) + "%";
+                        return "Valeur: " + round2dec(values[tooltipItem.xLabel].y) + "%";
                     },
                     afterBody: (tooltipItems, data) => {
-                        let index = tooltipItems[0].index;
-                        return "Somme: " + round2dec(integratedValues[index].y * 100) + "%";
+                        let index = tooltipItems[0].xLabel;
+                        return "Somme: " + (index === 100 ? 100 : round2dec(integratedValues[index].y * 100)) + "%";
                     }
                 }
             },
@@ -1141,7 +1145,7 @@ function gererPageNotes() {
                 labels: {
                     boxWidth: 20,
                     filter: function (legendItem, chartData) {
-                        return legendItem.datasetIndex > 0;
+                        return legendItem.datasetIndex > 3;
                         // return true or false based on legendItem's datasetIndex (legendItem.datasetIndex)
                     }
                 }
@@ -1149,28 +1153,28 @@ function gererPageNotes() {
             annotation: {
                 drawTime: "afterDatasetsDraw",
                 annotations: [
-                    {
-                        value: round2dec(toPercentage(valMoyTotale, denominateurTotal)),
-                        borderWidth: 2,
-                        borderColor: theme.moyenne,
-                    },
+                    // {
+                    //     value: round2dec(toPercentage(valMoyTotale, denominateurTotal)),
+                    //     borderWidth: 2,
+                    //     borderColor: theme.moyenne,
+                    // },
                     {
                         value: round2dec(toPercentage(valNoteTotale, denominateurTotal)),
-                        borderWidth: 3,
+                        borderWidth: 1,
                         borderColor: theme.note
                     },
-                    {
-                        value: toPercentage((valMoyTotale - valEcartTypeTotal), denominateurTotal) > 0 ?
-                            round2dec(toPercentage(valMoyTotale - valEcartTypeTotal, denominateurTotal)) : undefined,
-                        borderWidth: 1,
-                        borderColor: theme.ecartType,
-                    },
-                    {
-                        value: toPercentage((valMoyTotale + valEcartTypeTotal), denominateurTotal) < 100 ?
-                            round2dec(toPercentage(valMoyTotale + valEcartTypeTotal, denominateurTotal)) : undefined,
-                        borderWidth: 1,
-                        borderColor: theme.ecartType,
-                    }
+                    // {
+                    //     value: toPercentage((valMoyTotale - valEcartTypeTotal), denominateurTotal) > 0 ?
+                    //         round2dec(toPercentage(valMoyTotale - valEcartTypeTotal, denominateurTotal)) : undefined,
+                    //     borderWidth: 1,
+                    //     borderColor: theme.ecartType,
+                    // },
+                    // {
+                    //     value: toPercentage((valMoyTotale + valEcartTypeTotal), denominateurTotal) < 100 ?
+                    //         round2dec(toPercentage(valMoyTotale + valEcartTypeTotal, denominateurTotal)) : undefined,
+                    //     borderWidth: 1,
+                    //     borderColor: theme.ecartType,
+                    // }
                 ].map(e => ({
                     type: "line",
                     mode: "vertical",
@@ -1326,7 +1330,7 @@ function gererPageNotes() {
                 round2dec(toPercentage(valMoyTotale, denominateurTotal)),
                 round2dec(toPercentage(valEcartTypeTotal, denominateurTotal)),
                 {
-                    note: lightenOrDarkenColor(theme === "default-theme" ? "#4F7795" : "#B90E1C", 100),
+                    note: "dimgray"/* lightenOrDarkenColor(theme === "default-theme" ? "#4F7795" : "#B90E1C", 100) */,
                     courbe: theme === "default-theme" ? "#4F7795" : "#B90E1C",
                     moyenne: "lightgray",
                     ecartType: "whitesmoke"
