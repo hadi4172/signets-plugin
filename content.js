@@ -63,6 +63,21 @@ function lightenOrDarkenColor(color, amount) {
 
 function getSum(arr) { return arr.reduce((a, b) => a + b, 0); }
 
+function integrate(f, a, b) {
+    let n = (b - a) / 0.0005;
+    let dx = (b - a) / n;
+    let area = 0;
+
+    for (let i = 1; i <= n; i++) {
+        let x0 = a + (i - 1) * dx;
+        let x1 = a + i * dx;
+        let ai = dx * (f(x0) + f(x1)) / 2.;
+
+        area = area + ai
+    }
+    return area;
+}
+
 function getSubstringBetween(s, a, b, last = false) {
     if (typeof s === 'undefined') return "Error"
     let p = (last ? s.lastIndexOf(a) : s.indexOf(a)) + a.length;
@@ -643,7 +658,7 @@ function gererPageCours() {
 
                         let equivalentCote = infosCotes.find(c => noteCours[i].innerHTML.includes(c.lettre));
                         if (typeof equivalentCote !== "undefined" && arg.gpaInNumber === true) {
-                            noteCours[i].innerHTML = equivalentCote.nombre.toFixed(1).replace(/\./,".‎");   //il y a un caractère invisible ici
+                            noteCours[i].innerHTML = equivalentCote.nombre.toFixed(1).replace(/\./, ".‎");   //il y a un caractère invisible ici
                         }
 
                         if (/%|\//g.test(noteCours[i].innerHTML) && `${note}%` !== noteCours[i].innerHTML.split(" | ")[1]) {
@@ -1016,32 +1031,36 @@ function gererPageNotes() {
 
         // const betaFunction = (x) => (Math.pow(x, a - 1) * Math.pow(1 - x, b - 1)) / (beta);
 
-        /* source : https://github.com/royhzq/betajs */
         const betaFunction = x => {
-            const lnBetaFunc = (a, b) => {
-                let result = 0.0;
-                for (let i = 0; i < a - 2; i++) result += Math.log(a - 1 - i);
-                for (let i = 0; i < b - 2; i++) result += Math.log(b - 1 - i);
-                for (let i = 0; i < a + b - 2; i++) result -= Math.log(a + b - 1 - i);
+            const gamma = x => {
+                let p = [0.99999999999980993, 676.5203681218851, -1259.1392167224028,
+                    771.32342877765313, -176.61502916214059, 12.507343278686905,
+                    -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7
+                ];
+                if (x < 0.5) return Math.PI / (Math.sin(Math.PI * x) * gamma(1 - x));
 
-                return result
+                let a = p[0];
+                let t = --x + 7.5;
+                for (let i = 1; i < p.length; i++) a += p[i] / (x + i);
+
+                return Math.sqrt(2 * Math.PI) * Math.pow(t, x + 0.5) * Math.exp(-t) * a;
             };
-            const lnBetaPDF = (x, a, b) => ((a - 1) * Math.log(x) + (b - 1) * Math.log(1 - x) - lnBetaFunc(a, b));
 
-            return Math.exp(lnBetaPDF(x, a, b))
+            const lngamma = x => Math.log(gamma(x));
+            const lnBetaPDF = (x, a, b) => (lngamma(a + b) - lngamma(a) - lngamma(b) + (a - 1) * Math.log(x) + (b - 1) * Math.log(1 - x));
+            return Math.exp(lnBetaPDF(x, a, b));
         };
-        /* fin citation */
 
         let values = [...Array(101).keys()].map(x => ({ x: x, y: betaFunction(x / 100) }));
+        let integratedValues = [...Array(101).keys()].map(x => ({ x: x, y: integrate(betaFunction, 0, x / 100) }));
 
         let data = {
             // labels: [...Array(101).keys()],
             datasets: [{
-                label: "Densité de probabilité", // Name it as you want
-                // function: (x) => (Math.pow(x, a - 1) * Math.pow(1 - x, b - 1)) / (beta),
-                data: values, // Don't forget to add an empty data array, or else it will break
+                label: "Densité de probabilité",
+                data: values,
                 borderColor: theme.courbe,
-                borderWidth:0.1,
+                borderWidth: 0.1,
                 backgroundColor: theme.courbe,
                 pointRadius: 0,
                 showLine: true,
@@ -1093,6 +1112,7 @@ function gererPageNotes() {
             tooltips: {
                 mode: 'index',
                 intersect: false,
+                displayColors: false,
                 callbacks: {
                     title: (tooltipItems, data) => {
                         return round1dec(data.datasets[tooltipItems[0].datasetIndex].data[tooltipItems[0].index].x) + "%";
@@ -1102,7 +1122,12 @@ function gererPageNotes() {
                         let datasetIndex = tooltipItem.datasetIndex;
                         // let label = data.datasets[tooltipItem.datasetIndex].label || '';
                         let value = data.datasets[datasetIndex].data[index];
-                        return round2dec(value.y) + "%";
+
+                        return "Valeur: " + round2dec(value.y) + "%";
+                    },
+                    afterBody: (tooltipItems, data) => {
+                        let index = tooltipItems[0].index;
+                        return "Somme: " + round2dec(integratedValues[index].y * 100) + "%";
                     }
                 }
             },
@@ -1116,7 +1141,7 @@ function gererPageNotes() {
                 labels: {
                     boxWidth: 20,
                     filter: function (legendItem, chartData) {
-                        return legendItem.datasetIndex !== 0;
+                        return legendItem.datasetIndex > 0;
                         // return true or false based on legendItem's datasetIndex (legendItem.datasetIndex)
                     }
                 }
@@ -1132,7 +1157,7 @@ function gererPageNotes() {
                     {
                         value: round2dec(toPercentage(valNoteTotale, denominateurTotal)),
                         borderWidth: 3,
-                        borderColor: theme.note 
+                        borderColor: theme.note
                     },
                     {
                         value: toPercentage((valMoyTotale - valEcartTypeTotal), denominateurTotal) > 0 ?
