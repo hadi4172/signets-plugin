@@ -1,7 +1,7 @@
 {
     "name": "SignETS plugin",
     "manifest_version": 2,
-    "version": "0.4.8",
+    "version": "0.4.10",
     "description": "Une extension pour améliorer l'interface de SignETS",
     "icons": {
         "128": "assets/icon128.png",

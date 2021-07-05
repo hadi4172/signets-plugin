@@ -73,7 +73,7 @@ function integrate(f, a, b) {
         let x1 = a + i * dx;
         let ai = dx * (f(x0) + f(x1)) / 2.;
 
-        area += ai;
+        if (!isNaN(ai) && isFinite(ai)) area += ai;
     }
     return area;
 }
@@ -1093,11 +1093,17 @@ function gererPageNotes() {
         let a = composants[0];
         let b = composants[1];
 
-        // let beta = Math.sqrt(2 * Math.PI) * (Math.pow(a, a - 0.5) * Math.pow(b, b - 0.5)) / (Math.pow(a + b, a + b - 0.5));
+        const MODE_HISTOGRAMME = true;
+        let ecartBande = 5;
+        let nbBandes = 100 / ecartBande;
 
-        // const betaFunction = (x) => (Math.pow(x, a - 1) * Math.pow(1 - x, b - 1)) / (beta);
+        const fonctionHistogramme = (x) => {
+            return Math.floor(x * nbBandes) / nbBandes !== Math.ceil(x * nbBandes) / nbBandes ?
+                integrate((x) => betaFunction(x, a, b), Math.floor(x * nbBandes) / nbBandes, Math.ceil(x * nbBandes) / nbBandes) / ((Math.ceil(x * nbBandes) - Math.floor(x * nbBandes)) / nbBandes) * ecartBande
+                : fonctionHistogramme(x - 0.001)
+        }
 
-        let values = [...Array(101).keys()].map(x => ({ x: x, y: betaFunction(x / 100, a, b) }));
+        let values = [...Array(101).keys()].map(x => ({ x: x, y: MODE_HISTOGRAMME ? fonctionHistogramme(x / 100) : betaFunction(x / 100, a, b) }));
         let integratedValues = [...Array(101).keys()].map(x => ({ x: x, y: integrate((x) => betaFunction(x, a, b), 0, x / 100) }));
 
         let datasets = [
@@ -1115,6 +1121,7 @@ function gererPageNotes() {
             datasets: [
                 ...datasets.map((e, i) => ({
                     label: "Densité de probabilité",
+                    lineTension: 0,
                     data: e,
                     borderColor: datasetsColors[i],
                     borderWidth: 0.1,
@@ -1137,7 +1144,7 @@ function gererPageNotes() {
                 yAxes: [{
                     scaleLabel: {
                         display: true,
-                        labelString: "Densité d'étudiants en %",
+                        labelString: MODE_HISTOGRAMME ? "Nombre d'étudiants en %" : "Densité d'étudiants en %",
                         fontSize: 12
                     }
                 }],
@@ -1146,6 +1153,11 @@ function gererPageNotes() {
                         min: 0,
                         max: 100,
                         stepSize: 20,
+                        // callback: function (value, index, values) {
+                        //     if (value % 20 === 0) 
+                        //         return value;
+                        //     return "";
+                        // },
                     },
                     scaleLabel: {
                         display: true,
@@ -1163,7 +1175,13 @@ function gererPageNotes() {
                 displayColors: false,
                 callbacks: {
                     title: (tooltipItems, data) => {
-                        return round1dec(data.datasets[tooltipItems[0].datasetIndex].data[tooltipItems[0].index].x) + "%";
+                        let hoverX = data.datasets[tooltipItems[0].datasetIndex].data[tooltipItems[0].index].x;
+                        return MODE_HISTOGRAMME ?
+                            `${100 * Math.floor(hoverX / 100 * nbBandes) / nbBandes !== 0 ? "]" : "["
+                            }${100 * Math.floor(hoverX / 100 * nbBandes) / nbBandes !== 100 * Math.ceil(hoverX / 100 * nbBandes) / nbBandes || hoverX === 0
+                                ? Math.round(100 * Math.floor(hoverX / 100 * nbBandes) / nbBandes) : Math.round(100 * Math.floor((hoverX - 0.01) / 100 * nbBandes) / nbBandes)} - ${Math.round(hoverX !== 0 ? 100 * Math.ceil(hoverX / 100 * nbBandes) / nbBandes :
+                                    100 * Math.ceil((hoverX + 0.01) / 100 * nbBandes) / nbBandes)}] %`
+                            : round1dec(hoverX) + "%";
 
                         // return round1dec(data.datasets[tooltipItems[tooltipItems.length - 1].datasetIndex].data[tooltipItems[0].xLabel].x) + "%";
                     },
@@ -1209,6 +1227,11 @@ function gererPageNotes() {
                         borderWidth: 1,
                         borderColor: theme.note
                     },
+                    ...[...Array(21).keys()].map(e => e * 5).map(e => ({
+                        value: e,
+                        borderWidth: 2,
+                        borderColor: "rgba(220,220,220,0.35)"
+                    }))
                     // {
                     //     value: toPercentage((valMoyTotale - valEcartTypeTotal), denominateurTotal) > 0 ?
                     //         round2dec(toPercentage(valMoyTotale - valEcartTypeTotal, denominateurTotal)) : undefined,
@@ -1227,6 +1250,11 @@ function gererPageNotes() {
                     scaleID: "x-axis-1",
                     ...e
                 }))
+            },
+            elements: {
+                line: {
+                    tension: 0
+                }
             }
         };
 
