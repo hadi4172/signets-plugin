@@ -78,6 +78,32 @@ function integrate(f, a, b) {
     return area;
 }
 
+function betaFunction(x, a, b) {
+    const gamma = x => {
+        let p = [0.99999999999980993, 676.5203681218851, -1259.1392167224028,
+            771.32342877765313, -176.61502916214059, 12.507343278686905,
+            -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7
+        ];
+        if (x < 0.5) return Math.PI / (Math.sin(Math.PI * x) * gamma(1 - x));
+
+        let a = p[0];
+        let t = --x + 7.5;
+        for (let i = 1; i < p.length; i++) a += p[i] / (x + i);
+
+        return Math.sqrt(2 * Math.PI) * Math.pow(t, x + 0.5) * Math.exp(-t) * a;
+    };
+
+    const lngamma = x => Math.log(gamma(x));
+    const lnBetaPDF = (x, a, b) => (lngamma(a + b) - lngamma(a) - lngamma(b) + (a - 1) * Math.log(x) + (b - 1) * Math.log(1 - x));
+    return Math.exp(lnBetaPDF(x, a, b));
+}
+
+function getIndexOfClosestNumber(x, arr) {
+    let indexArr = arr.map((k) => Math.abs(k - x));
+    let min = Math.min(...indexArr);
+    return indexArr.indexOf(min);
+}
+
 function getSubstringBetween(s, a, b, last = false) {
     if (typeof s === 'undefined') return "Error"
     let p = (last ? s.lastIndexOf(a) : s.indexOf(a)) + a.length;
@@ -912,14 +938,16 @@ function gererPageNotes() {
     let noteGrpTotal = document.querySelector('#ctl00_ContentPlaceHolderMain_lesOnglets_tmpl0_txtMoyenne');
     let ecartTypeTotal = document.querySelector('#ctl00_ContentPlaceHolderMain_lesOnglets_tmpl0_txtEcartType');
     let medianeTotale = document.querySelector('#ctl00_ContentPlaceHolderMain_lesOnglets_tmpl0_txtMediane');
+    let rangCentileTotal = document.querySelector('#ctl00_ContentPlaceHolderMain_lesOnglets_tmpl0_txtRangCentile');
+    let coteFinale = document.querySelector('#ctl00_ContentPlaceHolderMain_lesOnglets_tmpl0_txtCoteFinale');
 
     let espacement = "&emsp;&emsp;&emsp;&emsp;";
     let valNoteTotale = getNumber(reformatterNote(noteTotale.innerHTML).split("/")[0]);
     let denominateurTotal = getNumber(reformatterNote(noteTotale.innerHTML).split("/")[1]);
     let valMoyTotale = getNumber(reformatterNote(noteGrpTotal.innerHTML).split("/")[0]);
     let valEcartTypeTotal = getNumber(ecartTypeTotal.innerHTML);
-    let rangCentileTotal = document.querySelector('#ctl00_ContentPlaceHolderMain_lesOnglets_tmpl0_txtRangCentile');
-    let coteFinale = document.querySelector('#ctl00_ContentPlaceHolderMain_lesOnglets_tmpl0_txtCoteFinale');
+    let valMedianeTotale = getNumber(medianeTotale.innerHTML);
+    let valRangCentileTotal = getNumber(rangCentileTotal.innerHTML);
 
     let donneesGraphique = [];
 
@@ -1018,41 +1046,59 @@ function gererPageNotes() {
 
     // console.log(`donneesGraphique:`, donneesGraphique);
 
-    const injecterGraphiqueDistribution = (elementHote, moyenne, ecartType, theme) => {
+    const injecterGraphiqueDistribution = (elementHote, moyenne, ecartType, mediane, rangCentile, note, theme) => {
         // console.log(`ecartType`, ecartType);
         // console.log(`moyenne`, moyenne);
         moyenne /= 100;
         ecartType /= 100;
+        mediane /= 100;
 
-        let a = (-Math.pow(moyenne, 3) + Math.pow(moyenne, 2) - moyenne * Math.pow(ecartType, 2)) / Math.pow(ecartType, 2);
-        let b = ((moyenne - 1) * (Math.pow(moyenne, 2) - moyenne + Math.pow(ecartType, 2))) / Math.pow(ecartType, 2);
+        const obtenirMeilleursComposants = () => {
+            let composantsClassiques = [
+                (-Math.pow(moyenne, 3) + Math.pow(moyenne, 2) - moyenne * Math.pow(ecartType, 2)) / Math.pow(ecartType, 2),
+                ((moyenne - 1) * (Math.pow(moyenne, 2) - moyenne + Math.pow(ecartType, 2))) / Math.pow(ecartType, 2)
+            ]; //utilise moyenne et écart type
+
+            let v = ecartType / moyenne;
+            let d = mediane;
+
+            let composantsAlternatifs = [
+                (1 / (6 * v * v)) * (-5 * d * v * v + Math.sqrt(Math.pow(5 * d * v * v + 3 * d - v * v - 3, 2) - 12 * (1 - 2 * d) * v * v) - 3 * d + v * v + 3),
+                (1.5 * d) / (3 * v * v) + (2.5 * d) / 3 + ((Math.sqrt(Math.pow(5 * d * v * v + 3 * d - v * v - 3, 2) - 12 * (1 - 2 * d) * v * v)) / (6 * v * v)) * (-1 + 1 / d) - 1 / (v * v)
+                - 1 / 3 + 1.5 / (3 * d * v * v) - 1 / (6 * d)
+            ]; // coefficient de variation (ecartType / moyenne) et médiane
+
+            let resultats = [
+                integrate((x) => betaFunction(x, composantsClassiques[0], composantsClassiques[1]), 0, note / 100) * 0.99,
+                integrate((x) => betaFunction(x, composantsAlternatifs[0], composantsAlternatifs[1]), 0, note / 100) * 0.99,
+                integrate((x) => betaFunction(x, (composantsClassiques[0] + composantsAlternatifs[0]) / 2,
+                    (composantsClassiques[1] + composantsAlternatifs[1]) / 2), 0, note / 100) * 0.99
+            ];
+
+            // console.log(`resultats`, resultats);
+            // console.log(`rangCentile:`,rangCentile);
+            // console.log(`getIndexOfClosestNumber(rangCentile / 100, resultats):`,getIndexOfClosestNumber(rangCentile / 100, resultats));
+
+            switch (getIndexOfClosestNumber(rangCentile / 100, resultats)) {
+                case 0: return [composantsClassiques[0], composantsClassiques[1]];
+                case 1: return [composantsAlternatifs[0], composantsAlternatifs[1]];
+                case 2: return [(composantsClassiques[0] + composantsAlternatifs[0]) / 2, (composantsClassiques[1] + composantsAlternatifs[1]) / 2];
+                default: return null;
+            }
+        };
+
+        let composants = obtenirMeilleursComposants();
+        // console.log(`composants`, composants);
+
+        let a = composants[0];
+        let b = composants[1];
 
         // let beta = Math.sqrt(2 * Math.PI) * (Math.pow(a, a - 0.5) * Math.pow(b, b - 0.5)) / (Math.pow(a + b, a + b - 0.5));
 
         // const betaFunction = (x) => (Math.pow(x, a - 1) * Math.pow(1 - x, b - 1)) / (beta);
 
-        const betaFunction = x => {
-            const gamma = x => {
-                let p = [0.99999999999980993, 676.5203681218851, -1259.1392167224028,
-                    771.32342877765313, -176.61502916214059, 12.507343278686905,
-                    -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7
-                ];
-                if (x < 0.5) return Math.PI / (Math.sin(Math.PI * x) * gamma(1 - x));
-
-                let a = p[0];
-                let t = --x + 7.5;
-                for (let i = 1; i < p.length; i++) a += p[i] / (x + i);
-
-                return Math.sqrt(2 * Math.PI) * Math.pow(t, x + 0.5) * Math.exp(-t) * a;
-            };
-
-            const lngamma = x => Math.log(gamma(x));
-            const lnBetaPDF = (x, a, b) => (lngamma(a + b) - lngamma(a) - lngamma(b) + (a - 1) * Math.log(x) + (b - 1) * Math.log(1 - x));
-            return Math.exp(lnBetaPDF(x, a, b));
-        };
-
-        let values = [...Array(101).keys()].map(x => ({ x: x, y: betaFunction(x / 100) }));
-        let integratedValues = [...Array(101).keys()].map(x => ({ x: x, y: integrate(betaFunction, 0, x / 100) }));
+        let values = [...Array(101).keys()].map(x => ({ x: x, y: betaFunction(x / 100, a, b) }));
+        let integratedValues = [...Array(101).keys()].map(x => ({ x: x, y: integrate((x) => betaFunction(x, a, b), 0, x / 100) }));
 
         let datasets = [
             values.filter(e => e.x / 100 < moyenne - ecartType),
@@ -1324,7 +1370,7 @@ function gererPageNotes() {
                         borderWidth: 1,
                         borderColor: "dimgray"
                     },
-                
+
                 ].map(e => ({
                     type: "line",
                     mode: "horizontal",
@@ -1345,6 +1391,9 @@ function gererPageNotes() {
                 document.getElementById('distributionBeta'),
                 round2dec(toPercentage(valMoyTotale, denominateurTotal)),
                 round2dec(toPercentage(valEcartTypeTotal, denominateurTotal)),
+                round2dec(toPercentage(valMedianeTotale, denominateurTotal)),
+                valRangCentileTotal,
+                round2dec(toPercentage(valNoteTotale, denominateurTotal)),
                 {
                     note: "dimgray"/* lightenOrDarkenColor(theme === "default-theme" ? "#4F7795" : "#B90E1C", 100) */,
                     courbe: theme === "default-theme" ? "#4F7795" : "#B90E1C",
