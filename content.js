@@ -63,19 +63,32 @@ function lightenOrDarkenColor(color, amount) {
 
 function getSum(arr) { return arr.reduce((a, b) => a + b, 0); }
 
-function integrate(f, a, b) {
-    let n = (b - a) / 0.0005;
-    let dx = (b - a) / n;
-    let area = 0;
+// function integrate(f, a, b) {
+//     let n = (b - a) / 0.0005;
+//     let dx = (b - a) / n;
+//     let area = 0;
 
-    for (let i = 1; i <= n; i++) {
-        let x0 = a + (i - 1) * dx;
-        let x1 = a + i * dx;
-        let ai = dx * (f(x0) + f(x1)) / 2.;
+//     for (let i = 1; i <= n; i++) {
+//         let x0 = a + (i - 1) * dx;
+//         let x1 = a + i * dx;
+//         let ai = dx * (f(x0) + f(x1)) / 2.;
 
-        if (!isNaN(ai) && isFinite(ai)) area += ai;
+//         if (!isNaN(ai) && isFinite(ai)) area += ai;
+//     }
+//     return area;
+// }
+
+function integrate(f, a, b, n) {
+    const returnIfFinite = (number) => (!isNaN(number) && isFinite(number)) ? number : 0;
+    if (!n) n = (b - a) / 0.0015;
+    let dx = returnIfFinite((b - a) / n);
+    let sum1 = returnIfFinite(f(a + dx / 2));
+    let sum2 = 0;
+    for (let i = 1; i < n; i++) {
+        sum1 += returnIfFinite(f(a + dx * i + dx / 2));
+        sum2 += returnIfFinite(f(a + dx * i));
     }
-    return area;
+    return (dx / 6) * (returnIfFinite(f(a)) + returnIfFinite(f(b)) + 4 * sum1 + 2 * sum2);
 }
 
 function betaFunction(x, a, b) {
@@ -1103,8 +1116,8 @@ function gererPageNotes() {
                 : fonctionHistogramme(x - 0.001)
         }
 
-        let values = [...Array(101).keys()].map(x => ({ x: x, y: MODE_HISTOGRAMME ? fonctionHistogramme(x / 100) : betaFunction(x / 100, a, b) }));
-        let integratedValues = [...Array(101).keys()].map(x => ({ x: x, y: integrate((x) => betaFunction(x, a, b), 0, x / 100) }));
+        let values = [...Array(201).keys()].map(e=>e/2).map(x => ({ x: x, y: MODE_HISTOGRAMME ? fonctionHistogramme(x / 100) : betaFunction(x / 100, a, b) }));
+        let integratedValues = [...Array(201).keys()].map(e=>e/2).map(x => ({ x: x, y: integrate((x) => betaFunction(x, a, b), 0, x / 100) }));
 
         let datasets = [
             values.filter(e => e.x / 100 < moyenne - ecartType),
@@ -1113,7 +1126,7 @@ function gererPageNotes() {
             values.filter(e => e.x / 100 > moyenne + ecartType)
         ];
 
-        datasets = datasets.map(e => typeof e[0] !== "undefined" ? [...[...Array(e[0].x).keys()].map(s => null), ...e] : e);
+        datasets = datasets.map(e => typeof e[0] !== "undefined" ? [...[...Array(Math.round(e[0].x * 2)).keys()].map(s => null), ...e] : e);
         let datasetsColors = ["lightcoral", "lightpink", "lightgreen", "limegreen"];
 
         let data = {
@@ -1191,11 +1204,11 @@ function gererPageNotes() {
                         // let label = data.datasets[tooltipItem.datasetIndex].label || '';
                         // let value = data.datasets[datasetIndex].data[index];
 
-                        return "Valeur: " + round2dec(values[tooltipItem.xLabel].y) + "%";
+                        return "Valeur: " + round2dec(values[Math.round(tooltipItem.xLabel * 2)].y) + "%";
                     },
                     afterBody: (tooltipItems, data) => {
-                        let index = tooltipItems[0].xLabel;
-                        return "Somme: " + (index === 100 ? 100 : round2dec(integratedValues[index].y * 100)) + "%";
+                        let index = Math.round(tooltipItems[0].xLabel);
+                        return "Somme: " + (index === 100 ? 100 : round2dec(integratedValues[index*2].y * 100)) + "%";
                     }
                 }
             },
