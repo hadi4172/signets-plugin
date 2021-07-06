@@ -80,7 +80,7 @@ function getSum(arr) { return arr.reduce((a, b) => a + b, 0); }
 
 function integrate(f, a, b, n) {
     const returnIfFinite = (number) => (!isNaN(number) && isFinite(number)) ? number : 0;
-    if (!n) n = (b - a) / 0.0015;
+    if (!n) n = (b - a) / 0.001;
     let dx = returnIfFinite((b - a) / n);
     let sum1 = returnIfFinite(f(a + dx / 2));
     let sum2 = 0;
@@ -979,8 +979,15 @@ function gererPageNotes() {
     </a>
     </div>
     ${denominateurTotal >= 15 ?
-    /*html*/`<canvas id="distributionBeta" width="250" height="275"></canvas>`
-            :/*html*/`<div style="margin:5px 5px 5px 20px;">Le graphique sera affiché quand au moins 15% des points seront notés</div>`
+    /*html*/`
+    <canvas id="distributionBeta" width="250" height="275"></canvas>
+    <div style="display: flex;align-items: center;justify-content: center;">
+    <label style="font-size:11px;"><input type="radio" id="ecart5" name="typedistribution" value="0">&nbsp;Écart de 5</label> 
+    <label style="font-size:11px;"><input type="radio" id="ecart10" name="typedistribution" value="1">&nbsp;Écart de 10</label> 
+    <label style="font-size:11px;"><input type="radio" id="courbe" name="typedistribution" value="2">&nbsp;Courbe</label> 
+    </div>`
+            :/*html*/`
+      <div style="margin:5px 5px 5px 20px;">Le graphique sera affiché quand au moins 15% des points seront notés</div>`
         }
     </br>
     <div style="font-weight:bold; text-align:right; border-top: 1px solid #bbb;">
@@ -993,6 +1000,24 @@ function gererPageNotes() {
            SIGNETS plugin
       </a>
     </div>`;
+
+    let boutonsModeGraphiqueDistribution = Array.from(document.querySelectorAll('[name="typedistribution"]'));
+
+    boutonsModeGraphiqueDistribution.forEach((e) => {
+        e.addEventListener("click", () => {
+            chrome.storage.sync.set({ modeGraphique: Number(e.value) });
+            location.reload(true);
+        });
+    });
+
+    chrome.storage.sync.get('modeGraphique', (arg) => {
+        if (typeof arg.modeGraphique !== 'undefined') {
+            boutonsModeGraphiqueDistribution[arg.modeGraphique].checked = true;
+        } else {
+            boutonsModeGraphiqueDistribution[0].checked = true;
+            chrome.storage.sync.set({ modeGraphique: 0 });
+        }
+    });
 
     noteTotale.setAttribute("style", `background-color: ${getColor(
         getNumber(noteTotale.innerHTML),
@@ -1059,7 +1084,7 @@ function gererPageNotes() {
 
     // console.log(`donneesGraphique:`, donneesGraphique);
 
-    const injecterGraphiqueDistribution = (elementHote, moyenne, ecartType, mediane, rangCentile, note, theme) => {
+    const injecterGraphiqueDistribution = (elementHote, moyenne, ecartType, mediane, rangCentile, note, theme, mode) => {
         // console.log(`ecartType`, ecartType);
         // console.log(`moyenne`, moyenne);
         moyenne /= 100;
@@ -1106,18 +1131,29 @@ function gererPageNotes() {
         let a = composants[0];
         let b = composants[1];
 
-        const MODE_HISTOGRAMME = true;
-        let ecartBande = 5;
-        let nbBandes = 100 / ecartBande;
+        let modeHistogramme = true;
+        let ecartBande;
+
+        switch (mode) {
+            case 0: ecartBande = 5;
+                break;
+            case 1: ecartBande = 10;
+                break;
+            case 2: modeHistogramme = false;
+                break;
+            default: break;
+        }
+
+        let nbBandes = modeHistogramme ? 100 / ecartBande : 0;
 
         const fonctionHistogramme = (x) => {
             return Math.floor(x * nbBandes) / nbBandes !== Math.ceil(x * nbBandes) / nbBandes ?
                 integrate((x) => betaFunction(x, a, b), Math.floor(x * nbBandes) / nbBandes, Math.ceil(x * nbBandes) / nbBandes) / ((Math.ceil(x * nbBandes) - Math.floor(x * nbBandes)) / nbBandes) * ecartBande
-                : fonctionHistogramme(x - 0.001)
+                : x !== 0 ? fonctionHistogramme(x - 0.001) : fonctionHistogramme(x + 0.001)
         }
 
-        let values = [...Array(201).keys()].map(e=>e/2).map(x => ({ x: x, y: MODE_HISTOGRAMME ? fonctionHistogramme(x / 100) : betaFunction(x / 100, a, b) }));
-        let integratedValues = [...Array(201).keys()].map(e=>e/2).map(x => ({ x: x, y: integrate((x) => betaFunction(x, a, b), 0, x / 100) }));
+        let values = [...Array(201).keys()].map(e => e / 2).map(x => ({ x: x, y: modeHistogramme ? fonctionHistogramme(x / 100) : betaFunction(x / 100, a, b) }));
+        let integratedValues = [...Array(201).keys()].map(e => e / 2).map(x => ({ x: x, y: integrate((x) => betaFunction(x, a, b), 0, x / 100) }));
 
         let datasets = [
             values.filter(e => e.x / 100 < moyenne - ecartType),
@@ -1157,7 +1193,7 @@ function gererPageNotes() {
                 yAxes: [{
                     scaleLabel: {
                         display: true,
-                        labelString: MODE_HISTOGRAMME ? "Nombre d'étudiants en %" : "Densité d'étudiants en %",
+                        labelString: modeHistogramme ? "Nombre d'étudiants en %" : "Densité d'étudiants en %",
                         fontSize: 12
                     }
                 }],
@@ -1189,7 +1225,7 @@ function gererPageNotes() {
                 callbacks: {
                     title: (tooltipItems, data) => {
                         let hoverX = data.datasets[tooltipItems[0].datasetIndex].data[tooltipItems[0].index].x;
-                        return MODE_HISTOGRAMME ?
+                        return modeHistogramme ?
                             `${100 * Math.floor(hoverX / 100 * nbBandes) / nbBandes !== 0 ? "]" : "["
                             }${100 * Math.floor(hoverX / 100 * nbBandes) / nbBandes !== 100 * Math.ceil(hoverX / 100 * nbBandes) / nbBandes || hoverX === 0
                                 ? Math.round(100 * Math.floor(hoverX / 100 * nbBandes) / nbBandes) : Math.round(100 * Math.floor((hoverX - 0.01) / 100 * nbBandes) / nbBandes)} - ${Math.round(hoverX !== 0 ? 100 * Math.ceil(hoverX / 100 * nbBandes) / nbBandes :
@@ -1208,7 +1244,7 @@ function gererPageNotes() {
                     },
                     afterBody: (tooltipItems, data) => {
                         let index = Math.round(tooltipItems[0].xLabel);
-                        return "Somme: " + (index === 100 ? 100 : round2dec(integratedValues[index*2].y * 100)) + "%";
+                        return "Somme: " + (index === 100 ? 100 : round2dec(integratedValues[index * 2].y * 100)) + "%";
                     }
                 }
             },
@@ -1240,7 +1276,7 @@ function gererPageNotes() {
                         borderWidth: 1,
                         borderColor: theme.note
                     },
-                    ...[...Array(21).keys()].map(e => e * 5).map(e => ({
+                    ...[...Array(21).keys()].map(e => e * ecartBande).map(e => ({
                         value: e,
                         borderWidth: 2,
                         borderColor: "rgba(220,220,220,0.35)"
@@ -1276,6 +1312,7 @@ function gererPageNotes() {
             data: data,
             options: options
         });
+        
     }
 
     let donneesGraphiqueNotes = donneesGraphique.map((x, i) => {
@@ -1294,7 +1331,7 @@ function gererPageNotes() {
         }
     })
 
-    chrome.storage.sync.get('theme', function (arg) {
+    chrome.storage.sync.get(['theme', "modeGraphique"], function (arg) {
         let theme = "default-theme";
         if (typeof arg.theme !== 'undefined') {
             theme = arg.theme;
@@ -1428,19 +1465,67 @@ function gererPageNotes() {
         });
 
         if (denominateurTotal >= 15) {
-            injecterGraphiqueDistribution(
-                document.getElementById('distributionBeta'),
-                round2dec(toPercentage(valMoyTotale, denominateurTotal)),
-                round2dec(toPercentage(valEcartTypeTotal, denominateurTotal)),
-                round2dec(toPercentage(valMedianeTotale, denominateurTotal)),
-                valRangCentileTotal,
-                round2dec(toPercentage(valNoteTotale, denominateurTotal)),
-                {
-                    note: "dimgray"/* lightenOrDarkenColor(theme === "default-theme" ? "#4F7795" : "#B90E1C", 100) */,
-                    courbe: theme === "default-theme" ? "#4F7795" : "#B90E1C",
-                    moyenne: "lightgray",
-                    ecartType: "whitesmoke"
-                });
+            let modeGraphique = 0;
+            if (typeof arg.modeGraphique !== 'undefined') {
+                modeGraphique = arg.modeGraphique;
+            } else {
+                chrome.storage.sync.set({ modeGraphique: modeGraphique });
+            }
+
+            const insererPredictionCote = () => {
+                let cotesOrdonnees = infosCotes.slice(0).sort((a, b) => a.nombre - b.nombre)
+                let note = round2dec(toPercentage(valNoteTotale, denominateurTotal));
+                let nombreCalcule = 0;
+                let cotePredite = "";
+    
+                if(note < 50) cotePredite = "E";
+                else {
+                    for (let i = 0, length = cotesOrdonnees.length; i < length; i++) {
+                        if(i === length || cotesOrdonnees[i+1].noteEstimee > note){
+                            nombreCalcule += cotesOrdonnees[i].nombre;
+                            break;
+                        }
+                    }
+                    for (let i = 0, length = cotesOrdonnees.length; i < length; i++) {
+                        if(i === length || cotesOrdonnees[i+1].rangCentileEstime > valRangCentileTotal){
+                            nombreCalcule += cotesOrdonnees[i].nombre;
+                            break;
+                        }
+                    }
+                    nombreCalcule /= 2;
+        
+                    for (let i = 0, length = cotesOrdonnees.length; i < length; i++) {
+                        if(i === length || cotesOrdonnees[i+1].nombre > nombreCalcule){
+                            cotePredite = cotesOrdonnees[i === length ? i : (i+1)].lettre;
+                            if(cotePredite === "A+") cotePredite = "A ou A+";
+                            else if (cotePredite === "E") cotePredite = "E ou D";
+                            else cotePredite = cotesOrdonnees[i].lettre + ", " + cotePredite + " ou " + cotesOrdonnees[i+2].lettre;
+                            break;
+                        }
+                    }
+                }
+                coteFinale.innerHTML = "Prédiction : " + cotePredite;
+            }
+
+            if(coteFinale.innerHTML == "  ") insererPredictionCote();
+
+            setTimeout(() => {
+                injecterGraphiqueDistribution(
+                    document.getElementById('distributionBeta'),
+                    round2dec(toPercentage(valMoyTotale, denominateurTotal)),
+                    round2dec(toPercentage(valEcartTypeTotal, denominateurTotal)),
+                    round2dec(toPercentage(valMedianeTotale, denominateurTotal)),
+                    valRangCentileTotal,
+                    round2dec(toPercentage(valNoteTotale, denominateurTotal)),
+                    {
+                        note: "dimgray"/* lightenOrDarkenColor(theme === "default-theme" ? "#4F7795" : "#B90E1C", 100) */,
+                        courbe: theme === "default-theme" ? "#4F7795" : "#B90E1C",
+                        moyenne: "lightgray",
+                        ecartType: "whitesmoke"
+                    }, modeGraphique
+                );
+            },50);
+            
         }
 
         document.querySelector('#linksignetsplugin').setAttribute("style", `color:${theme === "default-theme" ? "#4F7795" : "#B90E1C"}; text-decoration: none;`);
@@ -1485,16 +1570,16 @@ let infosProgrammes = [
 ];
 
 let infosCotes = [
-    { lettre: "A+", nombre: 4.3 },
-    { lettre: "A-", nombre: 3.7 },
-    { lettre: "A", nombre: 4 },
-    { lettre: "B+", nombre: 3.3 },
-    { lettre: "B-", nombre: 2.7 },
-    { lettre: "B", nombre: 3 },
-    { lettre: "C+", nombre: 2.3 },
-    { lettre: "C-", nombre: 1.7 },
-    { lettre: "C", nombre: 2 },
-    { lettre: "D+", nombre: 1.3 },
-    { lettre: "D", nombre: 1 },
-    { lettre: "E", nombre: 0 }
+    { lettre: "A+", nombre: 4.3, noteEstimee:90, rangCentileEstime: 87 },
+    { lettre: "A-", nombre: 3.7, noteEstimee:80, rangCentileEstime: 69  },
+    { lettre: "A", nombre: 4, noteEstimee:85, rangCentileEstime: 78  },
+    { lettre: "B+", nombre: 3.3, noteEstimee:76, rangCentileEstime: 58  },
+    { lettre: "B-", nombre: 2.7, noteEstimee:69, rangCentileEstime: 40  },
+    { lettre: "B", nombre: 3, noteEstimee:72, rangCentileEstime: 49  },
+    { lettre: "C+", nombre: 2.3, noteEstimee:66.5, rangCentileEstime: 33  },
+    { lettre: "C-", nombre: 1.7, noteEstimee:60, rangCentileEstime: 15  },
+    { lettre: "C", nombre: 2, noteEstimee:63, rangCentileEstime: 24 },
+    { lettre: "D+", nombre: 1.3, noteEstimee:57, rangCentileEstime: 6  },
+    { lettre: "D", nombre: 1, noteEstimee:50, rangCentileEstime: 2  },
+    { lettre: "E", nombre: 0, noteEstimee:0, rangCentileEstime: 0  }
 ];
