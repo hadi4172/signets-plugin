@@ -1495,13 +1495,13 @@ function gererPageNotes() {
                 if (note < 50) cotePredite = "E";
                 else {
                     for (let i = 0, length = cotesOrdonnees.length; i < length; i++) {
-                        if (i === length || cotesOrdonnees[i + 1].noteEstimee > note) {
+                        if (i === length -1 || cotesOrdonnees[i + 1].noteEstimee > note) {
                             nombreCalcule += cotesOrdonnees[i].nombre;
                             break;
                         }
                     }
                     for (let i = 0, length = cotesOrdonnees.length; i < length; i++) {
-                        if (i === length || cotesOrdonnees[i + 1].rangCentileEstime > valRangCentileTotal) {
+                        if (i === length -1 || cotesOrdonnees[i + 1].rangCentileEstime > valRangCentileTotal) {
                             nombreCalcule += cotesOrdonnees[i].nombre;
                             break;
                         }
@@ -1509,8 +1509,8 @@ function gererPageNotes() {
                     nombreCalcule /= 2;
 
                     for (let i = 0, length = cotesOrdonnees.length; i < length; i++) {
-                        if (i === length || cotesOrdonnees[i + 1].nombre > nombreCalcule) {
-                            cotePredite = cotesOrdonnees[i === length ? i : (i + 1)].lettre;
+                        if (i === length -1 || cotesOrdonnees[i + 1].nombre > nombreCalcule) {
+                            cotePredite = cotesOrdonnees[(i === length -1) ? i : (i + 1)].lettre;
                             if (cotePredite === "A+") cotePredite = "A ou A+";
                             else if (cotePredite === "E") cotePredite = "E ou D";
                             else cotePredite = cotesOrdonnees[i].lettre + ", " + cotePredite + " ou " + cotesOrdonnees[i + 2].lettre;
@@ -1587,7 +1587,7 @@ let infosCotes = [
     { lettre: "A+", nombre: 4.3, noteEstimee: 90, rangCentileEstime: 87 },
     { lettre: "A-", nombre: 3.7, noteEstimee: 80, rangCentileEstime: 69 },
     { lettre: "A", nombre: 4, noteEstimee: 85, rangCentileEstime: 78 },
-    { lettre: "B+", nombre: 3.3, noteEstimee: 76, rangCentileEstime: 58 },
+    { lettre: "B+", nombre: 3.3, noteEstimee: 76, rangCentileEstime: 59 },
     { lettre: "B-", nombre: 2.7, noteEstimee: 69, rangCentileEstime: 40 },
     { lettre: "B", nombre: 3, noteEstimee: 72, rangCentileEstime: 49 },
     { lettre: "C+", nombre: 2.3, noteEstimee: 66.5, rangCentileEstime: 33 },
