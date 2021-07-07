@@ -535,7 +535,7 @@ function gererPageCours() {
                     creditsReussisNAffectantPasLaMoyenne = 0;
                 }
 
-                let pourcentageComplete = round1dec(toPercentage(getSum(etatProgrammes[0].sessions.map(s => s.credits)) + creditsReussisNAffectantPasLaMoyenne, infosProgrammes.find(p => p.code === etatProgrammes[0].code).credits));
+                let pourcentageComplete = Math.min(round1dec(toPercentage(getSum(etatProgrammes[0].sessions.map(s => s.credits)) + creditsReussisNAffectantPasLaMoyenne, infosProgrammes.find(p => p.code === etatProgrammes[0].code).credits)), 100);
 
                 new ldBar(".myBar", {
                     "stroke": theme === "default-theme" ? "#4F7795" : "#B90E1C",
@@ -651,11 +651,25 @@ function gererPageCours() {
                         coursNAffectantPasLaMoyenne = arg.coursSansGPA;
                     }
 
+                    if (typeof arg[cle] !== 'undefined') {
+                        coursNAffectantPasLaMoyenne = coursNAffectantPasLaMoyenne.filter(e => e.cle !== cle ||
+                            (/^[^A-Z‎]*$/.test(arg[cle][5]) && // il y a un caractère invisible dans cette ligne
+                                e.credits === parseInt(creditsCours[i].innerHTML) * arg[cle][4] / 100));
+                    }
+
                     if (/[KSVZ]/.test(noteCours[i].innerHTML) && !coursNAffectantPasLaMoyenne.some(e => e.cle === cle)) {
                         coursNAffectantPasLaMoyenne.push({
                             cle: cle,
                             programme: parseInt(programmeCours[i].innerHTML),
                             credits: parseInt(creditsCours[i].innerHTML)
+                        });
+                    }
+
+                    if (/^[^A-Z‎]*$/.test(noteCours[i].innerHTML) && !coursNAffectantPasLaMoyenne.some(e => e.cle === cle) && typeof arg[cle] !== "undefined") { // il y a un caractère invisible dans cette ligne
+                        coursNAffectantPasLaMoyenne.push({
+                            cle: cle,
+                            programme: parseInt(programmeCours[i].innerHTML),
+                            credits: parseInt(creditsCours[i].innerHTML) * arg[cle][4] / 100
                         });
                     }
 
@@ -1312,7 +1326,7 @@ function gererPageNotes() {
             data: data,
             options: options
         });
-        
+
     }
 
     let donneesGraphiqueNotes = donneesGraphique.map((x, i) => {
@@ -1477,29 +1491,29 @@ function gererPageNotes() {
                 let note = round2dec(toPercentage(valNoteTotale, denominateurTotal));
                 let nombreCalcule = 0;
                 let cotePredite = "";
-    
-                if(note < 50) cotePredite = "E";
+
+                if (note < 50) cotePredite = "E";
                 else {
                     for (let i = 0, length = cotesOrdonnees.length; i < length; i++) {
-                        if(i === length || cotesOrdonnees[i+1].noteEstimee > note){
+                        if (i === length || cotesOrdonnees[i + 1].noteEstimee > note) {
                             nombreCalcule += cotesOrdonnees[i].nombre;
                             break;
                         }
                     }
                     for (let i = 0, length = cotesOrdonnees.length; i < length; i++) {
-                        if(i === length || cotesOrdonnees[i+1].rangCentileEstime > valRangCentileTotal){
+                        if (i === length || cotesOrdonnees[i + 1].rangCentileEstime > valRangCentileTotal) {
                             nombreCalcule += cotesOrdonnees[i].nombre;
                             break;
                         }
                     }
                     nombreCalcule /= 2;
-        
+
                     for (let i = 0, length = cotesOrdonnees.length; i < length; i++) {
-                        if(i === length || cotesOrdonnees[i+1].nombre > nombreCalcule){
-                            cotePredite = cotesOrdonnees[i === length ? i : (i+1)].lettre;
-                            if(cotePredite === "A+") cotePredite = "A ou A+";
+                        if (i === length || cotesOrdonnees[i + 1].nombre > nombreCalcule) {
+                            cotePredite = cotesOrdonnees[i === length ? i : (i + 1)].lettre;
+                            if (cotePredite === "A+") cotePredite = "A ou A+";
                             else if (cotePredite === "E") cotePredite = "E ou D";
-                            else cotePredite = cotesOrdonnees[i].lettre + ", " + cotePredite + " ou " + cotesOrdonnees[i+2].lettre;
+                            else cotePredite = cotesOrdonnees[i].lettre + ", " + cotePredite + " ou " + cotesOrdonnees[i + 2].lettre;
                             break;
                         }
                     }
@@ -1507,7 +1521,7 @@ function gererPageNotes() {
                 coteFinale.innerHTML = "Prédiction : " + cotePredite;
             }
 
-            if(coteFinale.innerHTML == "  ") insererPredictionCote();
+            if (coteFinale.innerHTML == "  ") insererPredictionCote();
 
             setTimeout(() => {
                 injecterGraphiqueDistribution(
@@ -1524,8 +1538,8 @@ function gererPageNotes() {
                         ecartType: "whitesmoke"
                     }, modeGraphique
                 );
-            },50);
-            
+            }, 50);
+
         }
 
         document.querySelector('#linksignetsplugin').setAttribute("style", `color:${theme === "default-theme" ? "#4F7795" : "#B90E1C"}; text-decoration: none;`);
@@ -1570,16 +1584,16 @@ let infosProgrammes = [
 ];
 
 let infosCotes = [
-    { lettre: "A+", nombre: 4.3, noteEstimee:90, rangCentileEstime: 87 },
-    { lettre: "A-", nombre: 3.7, noteEstimee:80, rangCentileEstime: 69  },
-    { lettre: "A", nombre: 4, noteEstimee:85, rangCentileEstime: 78  },
-    { lettre: "B+", nombre: 3.3, noteEstimee:76, rangCentileEstime: 58  },
-    { lettre: "B-", nombre: 2.7, noteEstimee:69, rangCentileEstime: 40  },
-    { lettre: "B", nombre: 3, noteEstimee:72, rangCentileEstime: 49  },
-    { lettre: "C+", nombre: 2.3, noteEstimee:66.5, rangCentileEstime: 33  },
-    { lettre: "C-", nombre: 1.7, noteEstimee:60, rangCentileEstime: 15  },
-    { lettre: "C", nombre: 2, noteEstimee:63, rangCentileEstime: 24 },
-    { lettre: "D+", nombre: 1.3, noteEstimee:57, rangCentileEstime: 6  },
-    { lettre: "D", nombre: 1, noteEstimee:50, rangCentileEstime: 2  },
-    { lettre: "E", nombre: 0, noteEstimee:0, rangCentileEstime: 0  }
+    { lettre: "A+", nombre: 4.3, noteEstimee: 90, rangCentileEstime: 87 },
+    { lettre: "A-", nombre: 3.7, noteEstimee: 80, rangCentileEstime: 69 },
+    { lettre: "A", nombre: 4, noteEstimee: 85, rangCentileEstime: 78 },
+    { lettre: "B+", nombre: 3.3, noteEstimee: 76, rangCentileEstime: 58 },
+    { lettre: "B-", nombre: 2.7, noteEstimee: 69, rangCentileEstime: 40 },
+    { lettre: "B", nombre: 3, noteEstimee: 72, rangCentileEstime: 49 },
+    { lettre: "C+", nombre: 2.3, noteEstimee: 66.5, rangCentileEstime: 33 },
+    { lettre: "C-", nombre: 1.7, noteEstimee: 60, rangCentileEstime: 15 },
+    { lettre: "C", nombre: 2, noteEstimee: 63, rangCentileEstime: 24 },
+    { lettre: "D+", nombre: 1.3, noteEstimee: 57, rangCentileEstime: 6 },
+    { lettre: "D", nombre: 1, noteEstimee: 50, rangCentileEstime: 2 },
+    { lettre: "E", nombre: 0, noteEstimee: 0, rangCentileEstime: 0 }
 ];
