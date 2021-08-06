@@ -745,10 +745,10 @@ function gererPageCours() {
 
                         setTabValues(arg[cle][2], arg[cle][3], arg[cle][0], arg[cle][1], arg[cle][4]);
 
-                        if (noteCours.some(e => (e.innerHTML === "" || /^[0-9.]{0,4}%/g.test(e.innerHTML))) && secondRun) {
+                        if (noteCours.some(e => (e.innerHTML === "" || /^[0-9.]{0,4}%/g.test(e.innerHTML))) && secondRun) { 
 
                             obtenirSommaireCours(liensCours[i], true, (fetchedData) => {
-
+                                // console.log("fetch data for " + cle);
                                 if (![arg[cle][2], arg[cle][3], arg[cle][0], arg[cle][1], arg[cle][4], arg[cle][5]].every((e, i) => e === fetchedData[i]) && !(isNaN(fetchedData[0]) && isNaN(fetchedData[1]))) {
                                     console.log(`notes mises à jour pour ${cle}`);
 
@@ -768,7 +768,7 @@ function gererPageCours() {
                         }
 
                         if (secondRun) {
-                            if (liensCours[i] !== "") {
+                            if (liensCours[i] !== "") {     
 
                                 // obtenirSommaireCours(liensCours[i], true, (fetchedData) => {  //version asynchrone
                                 //     if (!(isNaN(fetchedData[0]) && isNaN(fetchedData[1]))) {
@@ -785,7 +785,7 @@ function gererPageCours() {
                                     chrome.storage.sync.set({ [cle]: [fetchedData[2], fetchedData[3], fetchedData[0], fetchedData[1], fetchedData[4], fetchedData[5]] });
                                 } else {
                                     thereIsNoData();
-                                    chrome.storage.sync.set({ [cle]: ["", "white", 0, 0, 0, ""] });
+                                    chrome.storage.sync.set({ [cle]: ["", "white", 0, 0, 0, /[A-Z]/.test(noteCours[i].innerHTML) ? noteCours[i].innerHTML : ""] });
                                 }
 
                             } else {
@@ -1495,13 +1495,13 @@ function gererPageNotes() {
                 if (note < 50) cotePredite = "E";
                 else {
                     for (let i = 0, length = cotesOrdonnees.length; i < length; i++) {
-                        if (i === length -1 || cotesOrdonnees[i + 1].noteEstimee > note) {
+                        if (i === length - 1 || cotesOrdonnees[i + 1].noteEstimee > note) {
                             nombreCalcule += cotesOrdonnees[i].nombre;
                             break;
                         }
                     }
                     for (let i = 0, length = cotesOrdonnees.length; i < length; i++) {
-                        if (i === length -1 || cotesOrdonnees[i + 1].rangCentileEstime > valRangCentileTotal) {
+                        if (i === length - 1 || cotesOrdonnees[i + 1].rangCentileEstime > valRangCentileTotal) {
                             nombreCalcule += cotesOrdonnees[i].nombre;
                             break;
                         }
@@ -1509,8 +1509,8 @@ function gererPageNotes() {
                     nombreCalcule /= 2;
 
                     for (let i = 0, length = cotesOrdonnees.length; i < length; i++) {
-                        if (i === length -1 || cotesOrdonnees[i + 1].nombre > nombreCalcule) {
-                            cotePredite = cotesOrdonnees[(i === length -1) ? i : (i + 1)].lettre;
+                        if (i === length - 1 || cotesOrdonnees[i + 1].nombre > nombreCalcule) {
+                            cotePredite = cotesOrdonnees[(i === length - 1) ? i : (i + 1)].lettre;
                             if (cotePredite === "A+") cotePredite = "A ou A+";
                             else if (cotePredite === "E") cotePredite = "E ou D";
                             else cotePredite = cotesOrdonnees[i].lettre + ", " + cotePredite + " ou " + cotesOrdonnees[i + 2].lettre;
