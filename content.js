@@ -414,7 +414,14 @@ function gererPageCours() {
                 Complétion du programme
             </div>
             </br>
-            <div class="myBar label-center" width="100%" data-value="50" style="width: 100%;"></div>
+            <div 
+                class="myBar label-center" 
+                width="100%" 
+                data-value="50" 
+                style="width: 100%;" 
+                title="Les cours actuellement en progression sont inclus dans le calcul et leurs crédits sont multipliés par leur % de complétion"
+                >
+            </div>
             </div>`
                     : ""}
             
@@ -535,7 +542,10 @@ function gererPageCours() {
                     creditsReussisNAffectantPasLaMoyenne = 0;
                 }
 
-                let pourcentageComplete = Math.min(round1dec(toPercentage(getSum(etatProgrammes[0].sessions.map(s => s.credits)) + creditsReussisNAffectantPasLaMoyenne, infosProgrammes.find(p => p.code === etatProgrammes[0].code).credits)), 100);
+                let creditsCompletes = getSum(etatProgrammes[0].sessions.map(s => s.credits)) + creditsReussisNAffectantPasLaMoyenne;
+                let creditsDuProgramme = infosProgrammes.find(p => p.code === etatProgrammes[0].code).credits;
+
+                let pourcentageComplete = Math.min(round1dec(toPercentage(creditsCompletes, creditsDuProgramme)), 100);
 
                 new ldBar(".myBar", {
                     "stroke": theme === "default-theme" ? "#4F7795" : "#B90E1C",
@@ -547,25 +557,43 @@ function gererPageCours() {
                 });
 
                 injectCSS(
-            /*css*/`
-            .ldBar-label {
-                color:dimgray;
-                margin-top:10px;
-                font-size: 1.15em;
-                font-weight: bolder;
-              }
+                    /*css*/`
+                    .ldBar-label {
+                        color:dimgray;
+                        margin-top:10px;
+                        font-size: 1.15em;
+                        font-weight: bolder;
+                    }
 
-              .ldBar path.mainline {
-                stroke-width: 10;
-              }
+                    .ldBar path.mainline {
+                        stroke-width: 10;
+                    }
 
-              .ldBar path.baseline {
-                stroke-width: 14;
-                stroke: #f1f2f3;
-                box-shadow: 20px 20px 20px 20px dimgray;
-              }
-              
-              `);
+                    .ldBar path.baseline {
+                        stroke-width: 14;
+                        stroke: #f1f2f3;
+                        box-shadow: 20px 20px 20px 20px dimgray;
+                    }
+                    
+                    `);
+
+                    let barLabel = document.querySelector(".ldBar-label");
+                    let originalLabel = barLabel.innerHTML;
+
+                    let percentStyleHider = injectCSS(".ldBar-label::after {opacity:1;}");
+
+                    barLabel.addEventListener("mouseover", () => {
+                        barLabel.innerHTML = `${round2dec(creditsCompletes)} / ${round1dec(creditsDuProgramme)}`;
+                        percentStyleHider.innerHTML = ".ldBar-label::after {opacity:0;}";
+                    });
+
+                    barLabel.addEventListener("mouseout", () => {
+                        barLabel.innerHTML = originalLabel;
+                        percentStyleHider.innerHTML = ".ldBar-label::after {opacity:1;}";
+                    });
+
+
+
             }
 
             document.querySelector('#linksignetsplugin').setAttribute("style", `color:${baseColor}; text-decoration: none;`);
@@ -745,7 +773,7 @@ function gererPageCours() {
 
                         setTabValues(arg[cle][2], arg[cle][3], arg[cle][0], arg[cle][1], arg[cle][4]);
 
-                        if (noteCours.some(e => (e.innerHTML === "" || /^[0-9.]{0,4}%/g.test(e.innerHTML))) && secondRun) { 
+                        if (noteCours.some(e => (e.innerHTML === "" || /^[0-9.]{0,4}%/g.test(e.innerHTML))) && secondRun) {
 
                             obtenirSommaireCours(liensCours[i], true, (fetchedData) => {
                                 // console.log("fetch data for " + cle);
@@ -768,7 +796,7 @@ function gererPageCours() {
                         }
 
                         if (secondRun) {
-                            if (liensCours[i] !== "") {     
+                            if (liensCours[i] !== "") {
 
                                 // obtenirSommaireCours(liensCours[i], true, (fetchedData) => {  //version asynchrone
                                 //     if (!(isNaN(fetchedData[0]) && isNaN(fetchedData[1]))) {
@@ -944,6 +972,11 @@ function gererPageNotes() {
         
         [aria-describedby="grilleNotes_columnheader_1"]{
             width:20px!important;
+        }
+
+        [aria-describedby*="grilleNotes_columnheader"]{
+            line-height:inherit!important;
+            padding: 5px 10px 5px 6px!important;
         }
     `)
 
