@@ -577,20 +577,20 @@ function gererPageCours() {
                     
                     `);
 
-                    let barLabel = document.querySelector(".ldBar-label");
-                    let originalLabel = barLabel.innerHTML;
+                let barLabel = document.querySelector(".ldBar-label");
+                let originalLabel = barLabel.innerHTML;
 
-                    let percentStyleHider = injectCSS(".ldBar-label::after {opacity:1;}");
+                let percentStyleHider = injectCSS(".ldBar-label::after {opacity:1;}");
 
-                    barLabel.addEventListener("mouseover", () => {
-                        barLabel.innerHTML = `${round2dec(creditsCompletes)} / ${round1dec(creditsDuProgramme)}`;
-                        percentStyleHider.innerHTML = ".ldBar-label::after {opacity:0;}";
-                    });
+                barLabel.addEventListener("mouseover", () => {
+                    barLabel.innerHTML = `${round2dec(creditsCompletes)} / ${round1dec(creditsDuProgramme)}`;
+                    percentStyleHider.innerHTML = ".ldBar-label::after {opacity:0;}";
+                });
 
-                    barLabel.addEventListener("mouseout", () => {
-                        barLabel.innerHTML = originalLabel;
-                        percentStyleHider.innerHTML = ".ldBar-label::after {opacity:1;}";
-                    });
+                barLabel.addEventListener("mouseout", () => {
+                    barLabel.innerHTML = originalLabel;
+                    percentStyleHider.innerHTML = ".ldBar-label::after {opacity:1;}";
+                });
 
 
 
@@ -699,6 +699,27 @@ function gererPageCours() {
                             programme: parseInt(programmeCours[i].innerHTML),
                             credits: parseInt(creditsCours[i].innerHTML) * arg[cle][4] / 100
                         });
+                    }
+
+                    if (["LOG100", "LOG121"].includes(siglesCours[i])) {
+                        let equivalentCote = infosCotes.find(c => noteCours[i].innerHTML.includes(c.lettre)); 
+                        equivalentCote = typeof equivalentCote !== "undefined" ? equivalentCote.nombre : 0;
+                        if (equivalentCote >= 2 
+                            && parseInt(programmeCours[i].innerHTML) === infosProgrammes.find(p => p.sigle === "CUT").code 
+                        ) {
+                            chrome.storage.sync.get('etatProgrammes', function (arg) {
+                                if (typeof arg.etatProgrammes !== 'undefined') {
+                                    let objetProgramme = arg.etatProgrammes.find(e => e.code === 7084 || e.code === 7086);      //LOG ou GTI
+                                    let id = `${cle.slice(0, 1)}${cle.slice(-2 - 6, -6)}`;
+                                    if (!objetProgramme.sessions.some(s => s.id === id)) {
+                                        objetProgramme.sessions.unshift({ credits: parseInt(creditsCours[i].innerHTML), id: id, moyenne: equivalentCote });
+                                        console.log(`Ajouté cours crédité ${cle.slice(-6)} à ${id}`);
+                                        chrome.storage.sync.set({ etatProgrammes: arg.etatProgrammes });
+                                    }
+                                }
+                            });
+
+                        }
                     }
 
                     if (i == length - 1 && session == sessions[sessions.length - 1]) {  //c'est laid mais on doit rester à l'interieur du chrome.storage.sync
