@@ -2,7 +2,7 @@ let etatProgrammes = [];
 let titreDeLaPage = "";
 let requetesEnCours = [];
 
-let version = 0.5;
+let version = 0.51;
 
 window.onload = () => {
     titreDeLaPage = document.title;
@@ -1172,6 +1172,7 @@ function gererPageNotes() {
         //     let itemDragged = evt.item;  // dragged HTMLElement
         //     itemDragged.parentNode.parentNode.style.removeProperty("width");
         // },
+        group: `${session + cours}Order`,
         store: {
             /**
              * Get the order of elements. Called once during initialization.
@@ -1179,7 +1180,15 @@ function gererPageNotes() {
              * @returns {Array}
              */
             get: function (sortable) {
+                let name = sortable.options.group.name;
                 let order = localStorage.getItem(sortable.options.group.name);
+
+                chrome.storage.sync.get(name, function (arg) {
+                    if (typeof arg[name] !== 'undefined' && order == null) {
+                        localStorage.setItem(sortable.options.group.name, arg[name]);
+                    }
+                });
+
                 return order ? order.split('|') : [];
             },
     
@@ -1189,6 +1198,7 @@ function gererPageNotes() {
              */
             set: function (sortable) {
                 let order = sortable.toArray();
+                chrome.storage.sync.set({[sortable.options.group.name]:order.join('|')});
                 localStorage.setItem(sortable.options.group.name, order.join('|'));
             }
         }
