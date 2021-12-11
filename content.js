@@ -2,6 +2,8 @@ let etatProgrammes = [];
 let titreDeLaPage = "";
 let requetesEnCours = [];
 
+let version = 0.5;
+
 window.onload = () => {
     titreDeLaPage = document.title;
 
@@ -12,11 +14,16 @@ window.onload = () => {
         gererPageCours();
     }
 
-    chrome.storage.sync.get('notify', function (arg) {
+    chrome.storage.sync.get(['notify', "version"], function (arg) {
         if (typeof arg.notify === 'undefined') {
             setTimeout(() => {
                 alert("SIGNETS Plugin est personnalisable ; cliquez sur l'icône du plugin dans votre barre de navigateur pour voir les options qui s'offrent à vous !");
                 chrome.storage.sync.set({ notify: "installation" });
+            }, 3000);
+        } else if (typeof arg.version === 'undefined') {
+            setTimeout(() => {
+                alert("SIGNETS Plugin a récemment été mis à jour! \nVous pouvez maintenant réorganiser l'ordre de vos évaluations par drag-and-drop pour ajuster le graphique d'évolution de votre moyenne \net \nestimer une cote en entrant une note et un rang centile (cliquez sur l'icone du plugin)!");
+                chrome.storage.sync.set({ version: version });
             }, 3000);
         }
     });
@@ -1119,6 +1126,9 @@ function gererPageNotes() {
         ]);
     }
 
+    mesNotes[0].parentNode.parentNode.classList.add('list-group');
+    mesNotes[0].parentNode.parentNode.parentNode.style.removeProperty("width");
+
     for (let i = 0; i < notesGrp.length; i++) {
         let noteEstRentre = notesGrp[i].innerHTML !== "&nbsp;";
         if (noteEstRentre && mesNotes[i].innerHTML === "&nbsp;") {
@@ -1130,6 +1140,8 @@ function gererPageNotes() {
             getNumber(notesGrp[i].innerHTML),
             getNumber(ecartsTypes[i].innerHTML),
             noteEstRentre)};`);
+        
+        mesNotes[i].parentNode.classList.add('list-group-item');
 
         // console.log(mesNotes[i].parentNode);
         mesNotes[i].style.fontWeight = "bold";
@@ -1146,9 +1158,53 @@ function gererPageNotes() {
             medianes[i].innerHTML += /*html*/` <span style="font-weight: normal;">(${Math.round(toPercentage(getNumber(medianes[i].innerHTML), getNumber(denominateurs[i].innerHTML)))}%)</span>`;
             ponderations[i].innerHTML += /*html*/`</br>(${round2dec(getNumber(ponderations[i].innerHTML) * maNoteEnPourcentage / 100)})`;
             ecartsTypes[i].innerHTML += ` (${Math.round(toPercentage(getNumber(ecartsTypes[i].innerHTML), getNumber(denominateurs[i].innerHTML)))}%)`;
+        } else {
+            donneesGraphique.push(undefined);
         }
 
     }
+
+    Sortable.create(document.querySelector(".list-group"), {
+        animation: 150,  // ms, animation speed moving items when sorting, `0` — without animation
+	    easing: "cubic-bezier(1, 0, 0, 1)", // Easing for animation. Defaults to null.
+        direction: 'horizontal',
+        // onEnd: (evt) => {
+        //     let itemDragged = evt.item;  // dragged HTMLElement
+        //     itemDragged.parentNode.parentNode.style.removeProperty("width");
+        // },
+        store: {
+            /**
+             * Get the order of elements. Called once during initialization.
+             * @param   {Sortable}  sortable
+             * @returns {Array}
+             */
+            get: function (sortable) {
+                let order = localStorage.getItem(sortable.options.group.name);
+                return order ? order.split('|') : [];
+            },
+    
+            /**
+             * Save the order of elements. Called onEnd (when the item is dropped).
+             * @param {Sortable}  sortable
+             */
+            set: function (sortable) {
+                let order = sortable.toArray();
+                localStorage.setItem(sortable.options.group.name, order.join('|'));
+            }
+        }
+    });
+
+
+    let ordreNotes = Array.from(document.querySelectorAll(".list-group-item")).map(e => parseInt(e.getAttribute('idx')));
+    // console.log(`ordreNotes`, ordreNotes);
+    let donneesGraphiqueOrdonne = [];
+    
+    // console.log(`donneesGraphique`, donneesGraphique);
+
+    for (let i = 0; i < ordreNotes.length; i++) {
+        donneesGraphiqueOrdonne.push(donneesGraphique[ordreNotes[i]]);
+    }
+    donneesGraphique = donneesGraphiqueOrdonne.filter(e => typeof e != "undefined");
 
     // console.log(`donneesGraphique:`, donneesGraphique);
 

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Estimer cote</title>
+    <meta charset="UTF-8">
+    <script src="estimerCote.js"></script>
+</head>
+
+<body>
+    <table>
+        <tr>
+            <td>Note : </td>
+            <td><input id=input-note type="number" step="any" class="inputText" required title="Note"/></td>
+        </tr>
+        <tr>
+            <td>Rang centile : </td>
+            <td><input id=input-rc type="number" step="any" class="inputText" required title="RC"/></td>
+        </tr>
+    </table>
+    <br/>
+    <button type="button" id=btn-calc>Calculer estimation</button>
+    <br/>
+    <br/>
+    <div id="resultat-cote" style="font-size: large; font-weight: bold;"></div>
+</body>
+
+</html>

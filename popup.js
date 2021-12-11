@@ -4,6 +4,7 @@ window.onload = function () {
     let checkboxShowGrades = document.querySelector("#alwaysshowgrades");
     let checkboxPreciseGrades = document.querySelector("#precisegrades");
     let radioThemes = Array.from(document.querySelectorAll('[name="theme"]'));
+    let estimerCoteBtn = document.querySelector("#btn-estimer-cote");
 
     chrome.storage.sync.get(['noColors', 'showGrades', 'theme', 'preciseGrades', 'gpaInNumber'], function (arg) {
         checkboxNoColors.checked = false;
@@ -57,5 +58,10 @@ window.onload = function () {
             chrome.storage.sync.set({ theme: radioTheme.getAttribute("value") });
         });
     }
+
+    estimerCoteBtn.addEventListener("click", function () {
+        chrome.windows.create({ 'url': 'estimerCote.html', 'type': 'popup', 'width': 300, 'height': 190 }, function (window) {
+        });
+    });
 
 };

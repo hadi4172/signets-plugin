@@ -1,7 +1,7 @@
 {
     "name": "SignETS plugin",
     "manifest_version": 2,
-    "version": "0.4.21",
+    "version": "0.5.0",
     "description": "Une extension pour améliorer l'interface de SignETS",
     "icons": {
         "128": "assets/icon128.png",
@@ -27,6 +27,7 @@
             "loadingbarjs/loading-bar.min.js",
             "chartjs/Chart.min.js",
             "chartjs/chartjs-plugin-annotation.min.js",
+            "sortablejs/Sortable.min.js",
             "content.js"
         ]
     }, {
