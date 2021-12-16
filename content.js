@@ -2,7 +2,7 @@ let etatProgrammes = [];
 let titreDeLaPage = "";
 let requetesEnCours = [];
 
-let version = 0.51;
+let version = 0.54;
 
 window.onload = () => {
     titreDeLaPage = document.title;
@@ -18,7 +18,10 @@ window.onload = () => {
         if (typeof arg.notify === 'undefined') {
             setTimeout(() => {
                 alert("SIGNETS Plugin est personnalisable ; cliquez sur l'icône du plugin dans votre barre de navigateur pour voir les options qui s'offrent à vous !");
-                chrome.storage.sync.set({ notify: "installation" });
+                chrome.storage.sync.set({ 
+                    notify: "installation", 
+                    version: version
+                });
             }, 3000);
         } else if (typeof arg.version === 'undefined') {
             setTimeout(() => {
@@ -370,7 +373,7 @@ function gererPageCours() {
 
     let expandButtons = Array.from(document.querySelectorAll('[mkr="expColBtn"]'));
 
-    chrome.storage.sync.get(['noColors', 'etatProgrammes', 'theme', 'creditsSansGPAParProgramme'], function (arg) {
+    chrome.storage.sync.get(['noColors', 'etatProgrammes', 'theme', 'creditsSansGPAParProgramme', 'creditsEchouesParProgramme'], function (arg) {
 
         if (!arg.noColors) {
             injectCSS( /*css*/ `
@@ -540,6 +543,7 @@ function gererPageCours() {
 
             if (leProgrammeActuelEstConnu) {
                 let creditsReussisNAffectantPasLaMoyenne = undefined;
+                let creditsEchoues = undefined;
 
                 if (typeof arg.creditsSansGPAParProgramme !== 'undefined') {
                     creditsReussisNAffectantPasLaMoyenne = arg.creditsSansGPAParProgramme.find(p => p.programme == etatProgrammes[0].code).creditsSansGPA;
@@ -549,7 +553,18 @@ function gererPageCours() {
                     creditsReussisNAffectantPasLaMoyenne = 0;
                 }
 
-                let creditsCompletes = getSum(etatProgrammes[0].sessions.map(s => s.credits)) + creditsReussisNAffectantPasLaMoyenne;
+                if (typeof arg.creditsEchouesParProgramme !== 'undefined') {
+                    creditsEchoues = arg.creditsEchouesParProgramme.find(p => p.programme == etatProgrammes[0].code);
+                    if(typeof creditsEchoues !== 'undefined'){
+                        creditsEchoues = creditsEchoues.creditsEchoues
+                    }
+                }
+
+                if (typeof creditsEchoues === 'undefined') {
+                    creditsEchoues = 0;
+                }
+
+                let creditsCompletes = getSum(etatProgrammes[0].sessions.map(s => s.credits)) + creditsReussisNAffectantPasLaMoyenne - creditsEchoues;
                 let creditsDuProgramme = infosProgrammes.find(p => p.code === etatProgrammes[0].code).credits;
 
                 let pourcentageComplete = Math.min(round1dec(toPercentage(creditsCompletes, creditsDuProgramme)), 100);
@@ -659,6 +674,7 @@ function gererPageCours() {
         let uneCoteDeCoursAChange = false;
 
         let coursNAffectantPasLaMoyenne = [];  //structure : [{cle:cle, programme:code, credits:credits},...]
+        let coursEchoues = [];  //structure : [{cle:cle, programme:code, credits:credits},...]
 
         for (let session of sessions) {
             let rangCentilesCours = Array.from(session.parentNode.nextSibling.querySelectorAll('[aria-describedby*="_columnheader_6"]'));
@@ -676,7 +692,7 @@ function gererPageCours() {
 
                 let cle = `${session.innerHTML.replace(/ /g, "")}${siglesCours[i]}`;
 
-                chrome.storage.sync.get([cle, 'theme', 'showGrades', 'preciseGrades', 'coursSansGPA', 'gpaInNumber'], function (arg) {
+                chrome.storage.sync.get([cle, 'theme', 'showGrades', 'preciseGrades', 'coursSansGPA', 'gpaInNumber', 'coursEchoues'], function (arg) {
                     let theme = "default-theme";
                     if (typeof arg.theme !== 'undefined') {
                         theme = arg.theme;
@@ -684,6 +700,10 @@ function gererPageCours() {
 
                     if (typeof arg.coursSansGPA !== 'undefined' && coursNAffectantPasLaMoyenne.length === 0) {
                         coursNAffectantPasLaMoyenne = arg.coursSansGPA;
+                    }
+
+                    if (typeof arg.coursEchoues !== 'undefined' && coursEchoues.length === 0) {
+                        coursEchoues = arg.coursEchoues;
                     }
 
                     if (typeof arg[cle] !== 'undefined') {
@@ -705,6 +725,14 @@ function gererPageCours() {
                             cle: cle,
                             programme: parseInt(programmeCours[i].innerHTML),
                             credits: parseInt(creditsCours[i].innerHTML) * arg[cle][4] / 100
+                        });
+                    }
+
+                    if (typeof arg[cle] !== "undefined" && /E/.test(noteCours[i].innerHTML) && !coursEchoues.some(e => e.cle === cle)) { 
+                        coursEchoues.push({
+                            cle: cle,
+                            programme: parseInt(programmeCours[i].innerHTML),
+                            credits: parseInt(creditsCours[i].innerHTML)
                         });
                     }
 
@@ -731,17 +759,29 @@ function gererPageCours() {
 
                     if (i == length - 1 && session == sessions[sessions.length - 1]) {  //c'est laid mais on doit rester à l'interieur du chrome.storage.sync
                         let creditsSansGPAParProgramme = [];  //structure : [{programme:code, creditsSansGPA:credits},...]
-                        let programmes = [...new Set(coursNAffectantPasLaMoyenne.map(c => c.programme))];
-                        for (const programme of programmes) {
+                        let creditsEchouesParProgramme = [];  //structure : [{programme:code, creditsSansGPA:credits},...]
+                        let programmesCreditsSansGPA = [...new Set(coursNAffectantPasLaMoyenne.map(c => c.programme))];
+                        let programmesCreditsEchoues = [...new Set(coursEchoues.map(c => c.programme))];
+
+                        for (const programme of programmesCreditsSansGPA) {
                             creditsSansGPAParProgramme.push({
                                 programme: programme,
                                 creditsSansGPA: getSum(coursNAffectantPasLaMoyenne.filter(c => c.programme === programme).map(c => c.credits))
                             });
                         }
 
+                        for (const programme of programmesCreditsEchoues) {
+                            creditsEchouesParProgramme.push({
+                                programme: programme,
+                                creditsEchoues: getSum(coursEchoues.filter(c => c.programme === programme).map(c => c.credits))
+                            });
+                        }
+
                         chrome.storage.sync.set({
                             coursSansGPA: coursNAffectantPasLaMoyenne,
-                            creditsSansGPAParProgramme: creditsSansGPAParProgramme
+                            creditsSansGPAParProgramme: creditsSansGPAParProgramme,
+                            coursEchoues: coursEchoues,
+                            creditsEchouesParProgramme: creditsEchouesParProgramme
                         });
                     }
 
