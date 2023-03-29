@@ -4,7 +4,6 @@
 ![Chrome Store Version](https://img.shields.io/chrome-web-store/v/bgbigmlncgkakhiaokjbhibkednbibpf)
 ![Chrome Store Rating](https://img.shields.io/chrome-web-store/rating/bgbigmlncgkakhiaokjbhibkednbibpf)
 ![Chrome Store Rating Count](https://img.shields.io/chrome-web-store/rating-count/bgbigmlncgkakhiaokjbhibkednbibpf)
-![Chrome Store](https://img.shields.io/chrome-web-store/d/bgbigmlncgkakhiaokjbhibkednbibpf)
 
 
 ## [Installer](https://chrome.google.com/webstore/detail/signets-plugin/bgbigmlncgkakhiaokjbhibkednbibpf)
