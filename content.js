@@ -361,11 +361,23 @@ function injectCSS(css) {
     return style;
 }
 
-function injectScript(injectedCode) {
-    let script = document.createElement("script");
+const nullthrows = (v) => {
+    if (v == null) throw new Error("it's a null");
+    return v;
+}
+
+function injectScript(src) {
+    const script = document.createElement('script');
     script.setAttribute('class', 'signets-plugin-script');
-    script.textContent = injectedCode;
-    document.head.appendChild(script);
+    // This is why it works!
+    script.src = src;
+    script.onload = function() {
+        this.remove();
+    };
+
+    // This script runs before the <head> element is created,
+    // so we add the script to <html> instead.
+    nullthrows(document.head || document.documentElement).appendChild(script);
 }
 
 function gererPageCours() {
@@ -644,7 +656,7 @@ function gererPageCours() {
 
             // Régler un bug relié aux menus déroulants qui ne fonctionnent plus quand on ajoute un élément au menu de gauche
             // il faut injecter un script dans la page pour avoir accès à ses fonctions jquery à partir de notre content script qui est isolé
-            injectScript(/*javascript*/`$('#menuElem').menu_toggle_adder();`);
+            injectScript(chrome.runtime.getURL('/injections/dropdown.js'));
         }
 
         if (typeof arg.etatProgrammes === 'undefined') {
@@ -1765,7 +1777,7 @@ function gererPageNotes() {
 
     // Régler un bug relié aux menus déroulants qui ne fonctionnent plus quand on ajoute un élément au menu de gauche
     // il faut injecter un script dans la page pour avoir accès à ses fonctions jquery à partir de notre content script qui est isolé
-    injectScript(/*javascript*/`$('#menuElem').menu_toggle_adder();`);
+    injectScript(chrome.runtime.getURL('/injections/dropdown.js'));
 }
 
 const INDEX_MAITRISE = 8;

@@ -1,6 +1,6 @@
 {
     "name": "SignETS plugin",
-    "manifest_version": 2,
+    "manifest_version": 3,
     "version": "0.5.7",
     "description": "Une extension pour améliorer l'interface de SignETS et ajouter des fonctionnalités utiles",
     "icons": {
@@ -8,7 +8,7 @@
         "48": "assets/icon48.png",
         "16": "assets/icon16.png"
     },
-    "browser_action": {
+    "action": {
         "default_icon": "assets/icon16.png",
         "default_popup": "popup.html"
     },
@@ -38,11 +38,19 @@
         "run_at": "document_start"
     }],
     "web_accessible_resources": [
-        "assets/pavillonE.jpg",
-		"assets/pavillonE2.svg"
+        {
+            "resources": ["assets/pavillonE.jpg", "assets/pavillonE2.svg", "injections/dropdown.js"],
+            "matches": ["<all_urls>"]
+        }
     ],
-    "content_security_policy": "script-src 'self' https://*.etsmtl.ca/*; object-src 'self'",
+    "content_security_policy": {
+        "extension_pages": "script-src 'self'; object-src 'self';",
+        "sandbox": "sandbox allow-scripts allow-forms allow-popups allow-modals; script-src 'self' 'unsafe-inline' 'unsafe-eval'; child-src 'self';"
+      },
     "permissions": [
         "storage"
+    ],
+    "host_permissions": [
+        "*://signets-ens.etsmtl.ca/*"
     ]
 }
