@@ -2,7 +2,7 @@ let etatProgrammes = [];
 let titreDeLaPage = "";
 let requetesEnCours = [];
 
-let version = 0.57;
+let version = 0.58;
 
 window.onload = () => {
     titreDeLaPage = document.title;
