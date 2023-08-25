@@ -18,8 +18,8 @@ window.onload = () => {
         if (typeof arg.notify === 'undefined') {
             setTimeout(() => {
                 alert("SIGNETS Plugin est personnalisable ; cliquez sur l'icône du plugin dans votre barre de navigateur pour voir les options qui s'offrent à vous !");
-                chrome.storage.sync.set({ 
-                    notify: "installation", 
+                chrome.storage.sync.set({
+                    notify: "installation",
                     version: version
                 });
             }, 3000);
@@ -373,7 +373,7 @@ function gererPageCours() {
 
     let expandButtons = Array.from(document.querySelectorAll('[mkr="expColBtn"]'));
 
-    chrome.storage.sync.get(['noColors', 'etatProgrammes', 'theme', 'creditsSansGPAParProgramme', 'creditsEchouesParProgramme'], function (arg) {
+    chrome.storage.sync.get(['noColors', 'etatProgrammes', 'theme', 'creditsSansGPAParProgramme', 'creditsEchouesParProgramme', 'coursRepris'], function (arg) {
 
         if (!arg.noColors) {
             injectCSS( /*css*/ `
@@ -412,8 +412,27 @@ function gererPageCours() {
             theme = arg.theme;
         }
 
+        let coursRepris = [];
+        if (typeof arg.coursRepris !== 'undefined') {
+            coursRepris = arg.coursRepris;
+        }
+
         const chargerElementsDeGauche = (etatProgrammes) => {
             let leProgrammeActuelEstConnu = infosProgrammes.some((p, i) => p.code === etatProgrammes[0].code /* && i < INDEX_MAITRISE */);
+
+            for(let cours of coursRepris) {
+                for(let programme of etatProgrammes) {
+                    if(cours.programme == programme.code
+                        && programme.sessions.some(s => s.id == cours.sessionReprise)) {
+                        let session = programme.sessions.find(s => s.id == cours.sessionReprise);
+                        // let moyenneAjustee = (session.moyenne * session.credits) / (session.credits - cours.credits);
+                        // session.moyenne = moyenneAjustee;
+                        // session.credits -= cours.credits;
+                        session.creditsReprise = 0;
+                        session.creditsReprise += cours.credits;
+                    }
+                }
+            }
 
             document.querySelector("#ctl00_LoginViewLeftColumn_MenuVertical").innerHTML += /*html*/`
         <div id="elementsAjoutesAGauche" style="transition:opacity 0.25s ease-in-out;">
@@ -424,17 +443,17 @@ function gererPageCours() {
                 Complétion du programme
             </div>
             </br>
-            <div 
-                class="myBar label-center" 
-                width="100%" 
-                data-value="50" 
-                style="width: 100%;" 
+            <div
+                class="myBar label-center"
+                width="100%"
+                data-value="50"
+                style="width: 100%;"
                 title="Les cours actuellement en progression sont inclus dans le calcul et leurs crédits sont multipliés par leur % de complétion"
                 >
             </div>
             </div>`
                     : ""}
-            
+
             </br>
             <canvas id="GPAChart" width="250" height="300"></canvas>
             </br>
@@ -442,8 +461,8 @@ function gererPageCours() {
         <div style="font-weight:bold; text-align:right; border-top: 1px solid #bbb;">
         </br>
         <a
-            title="Si vous avez aimé mon extension, n'hésitez pas à aller mettre une étoile et partager avec vos amis :)" 
-            target="_blank" 
+            title="Si vous avez aimé mon extension, n'hésitez pas à aller mettre une étoile et partager avec vos amis :)"
+            target="_blank"
             id="linksignetsplugin"
             href="https://chrome.google.com/webstore/detail/signets-plugin/bgbigmlncgkakhiaokjbhibkednbibpf">
             SIGNETS plugin
@@ -456,11 +475,16 @@ function gererPageCours() {
 
             let dataSets = etatProgrammes.map((p, i) => {
                 let programColor = lightenOrDarkenColor(baseColor, 75 * i);
+
                 let GPACumulatifs = etatProgrammes[i].sessions.map((s, j) => {
+
                     let sessionsEcoules = etatProgrammes[i].sessions.slice(0, j + 1);
+
+                    y = round2dec(getSum(sessionsEcoules.map(m => m.moyenne * m.credits)) /
+                            (getSum(sessionsEcoules.map(m => m.credits)) - getSum(sessionsEcoules.map(m => m.creditsReprise ?? 0))))
                     return {
                         x: sessionsEcoules[sessionsEcoules.length - 1].id,
-                        y: round2dec(getSum(sessionsEcoules.map(m => m.moyenne * m.credits)) / getSum(sessionsEcoules.map(m => m.credits)))
+                        y: y
                     };
                 });
 
@@ -596,7 +620,7 @@ function gererPageCours() {
                         stroke: #f1f2f3;
                         box-shadow: 20px 20px 20px 20px dimgray;
                     }
-                    
+
                     `);
 
                 let barLabel = document.querySelector(".ldBar-label");
@@ -675,6 +699,7 @@ function gererPageCours() {
 
         let coursNAffectantPasLaMoyenne = [];  //structure : [{cle:cle, programme:code, credits:credits},...]
         let coursEchoues = [];  //structure : [{cle:cle, programme:code, credits:credits},...]
+        let coursRepris = [];  //structure : [{cle:cle, programme:code, credits:credits, session:id},...]
 
         for (let session of sessions) {
             let rangCentilesCours = Array.from(session.parentNode.nextSibling.querySelectorAll('[aria-describedby*="_columnheader_6"]'));
@@ -688,11 +713,13 @@ function gererPageCours() {
 
             for (let i = 0, length = rangCentilesCours.length; i < length; i++) {
 
-                if (/[KSVZL]/.test(noteCours[i].innerHTML)) noteCours[i].parentNode.setAttribute("style", `background-color: lightblue;`);
+                if (/[KSVZ]/.test(noteCours[i].innerHTML)) noteCours[i].parentNode.setAttribute("style", `background-color: lightblue;`);
+
+                if (/XX|L/.test(noteCours[i].innerHTML)) noteCours[i].parentNode.setAttribute("style", `background-color: #e1e0e0;`);
 
                 let cle = `${session.innerHTML.replace(/ /g, "")}${siglesCours[i]}`;
 
-                chrome.storage.sync.get([cle, 'theme', 'showGrades', 'preciseGrades', 'coursSansGPA', 'gpaInNumber', 'coursEchoues'], function (arg) {
+                chrome.storage.sync.get([cle, 'theme', 'showGrades', 'preciseGrades', 'coursSansGPA', 'gpaInNumber', 'coursEchoues', 'coursRepris'], function (arg) {
                     let theme = "default-theme";
                     if (typeof arg.theme !== 'undefined') {
                         theme = arg.theme;
@@ -704,6 +731,10 @@ function gererPageCours() {
 
                     if (typeof arg.coursEchoues !== 'undefined' && coursEchoues.length === 0) {
                         coursEchoues = arg.coursEchoues;
+                    }
+
+                    if (typeof arg.coursRepris !== 'undefined' && coursRepris.length === 0) {
+                        coursRepris = arg.coursRepris;
                     }
 
                     if (typeof arg[cle] !== 'undefined') {
@@ -728,7 +759,7 @@ function gererPageCours() {
                         });
                     }
 
-                    if (typeof arg[cle] !== "undefined" && /E/.test(noteCours[i].innerHTML) && !coursEchoues.some(e => e.cle === cle)) { 
+                    if (typeof arg[cle] !== "undefined" && /E/.test(noteCours[i].innerHTML) && !coursEchoues.some(e => e.cle === cle)) {
                         coursEchoues.push({
                             cle: cle,
                             programme: parseInt(programmeCours[i].innerHTML),
@@ -736,11 +767,36 @@ function gererPageCours() {
                         });
                     }
 
+                    if (typeof arg[cle] !== "undefined" && /L/.test(noteCours[i].innerHTML) && !coursRepris.some(e => e.cle === cle)) {
+                        let idSemestre = `${cle.slice(0, 1)}${cle.slice(-2 - 6, -6)}`;
+                        let idSemestreReprise = "";
+
+                        sessions.forEach((s, i) => {
+                            // look for the first semester that have this course but with a cote other than L
+                            let noteCours = Array.from(s.parentNode.nextSibling.querySelectorAll('[aria-describedby*="_columnheader_5"]'));
+                            let siglesCours = Array.from(s.parentNode.nextSibling.querySelectorAll('[aria-describedby*="_columnheader_2"]')).map(x => x.textContent.split("-")[0])
+                            let index = siglesCours.findIndex(s => s === cle.slice(-6));
+                            if (index !== -1 && !/[L]/.test(noteCours[index].innerHTML)) {
+                                let strSemestreCourant = s.innerHTML.replace(/ /g, "");
+                                idSemestreReprise = `${strSemestreCourant.slice(0, 1)}${strSemestreCourant.slice(-2)}`;
+                            }
+                        });
+
+
+                        coursRepris.push({
+                            cle: cle,
+                            programme: parseInt(programmeCours[i].innerHTML),
+                            credits: parseInt(creditsCours[i].innerHTML),
+                            session: idSemestre,
+                            sessionReprise: idSemestreReprise
+                        });
+                    }
+
                     if (["LOG100", "LOG121"].includes(siglesCours[i])) {
-                        let equivalentCote = infosCotes.find(c => noteCours[i].innerHTML.includes(c.lettre)); 
+                        let equivalentCote = infosCotes.find(c => noteCours[i].innerHTML.includes(c.lettre));
                         equivalentCote = typeof equivalentCote !== "undefined" ? equivalentCote.nombre : 0;
-                        if (equivalentCote >= 2 
-                            && parseInt(programmeCours[i].innerHTML) === infosProgrammes.find(p => p.sigle === "CUT").code 
+                        if (equivalentCote >= 2
+                            && parseInt(programmeCours[i].innerHTML) === infosProgrammes.find(p => p.sigle === "CUT").code
                         ) {
                             chrome.storage.sync.get('etatProgrammes', function (arg) {
                                 if (typeof arg.etatProgrammes !== 'undefined') {
@@ -781,6 +837,7 @@ function gererPageCours() {
                             coursSansGPA: coursNAffectantPasLaMoyenne,
                             creditsSansGPAParProgramme: creditsSansGPAParProgramme,
                             coursEchoues: coursEchoues,
+                            coursRepris: coursRepris,
                             creditsEchouesParProgramme: creditsEchouesParProgramme
                         });
                     }
@@ -789,7 +846,10 @@ function gererPageCours() {
                         rangCentilesCours[i].innerHTML = rangCentile;
                         rangCentilesCours[i].style.color = "black";
                         rangCentilesCours[i].style.userSelect = "auto";
-                        if (rangCentilesCours[i].parentNode.getAttribute("style") !== "background-color: lightblue;")
+                        if (
+                            rangCentilesCours[i].parentNode.getAttribute("style") !== "background-color: lightblue;"
+                            && rangCentilesCours[i].parentNode.getAttribute("style") !== "background-color: #e1e0e0;"
+                            )
                             rangCentilesCours[i].parentNode.setAttribute("style", `background-color: ${color};`);
 
                         noteCours[i].style.whiteSpace = "nowrap";
@@ -1037,7 +1097,7 @@ function gererPageNotes() {
         [aria-describedby="grilleNotes_columnheader_4"]{
             width:45px!important;
         }
-        
+
         [aria-describedby="grilleNotes_columnheader_1"]{
             width:20px!important;
         }
@@ -1097,9 +1157,9 @@ function gererPageNotes() {
     /*html*/`
     <canvas id="distributionBeta" width="250" height="275"></canvas>
     <div style="display: flex;align-items: center;justify-content: center;">
-    <label style="font-size:11px;"><input type="radio" id="ecart5" name="typedistribution" value="0">&nbsp;Écart de 5</label> 
-    <label style="font-size:11px;"><input type="radio" id="ecart10" name="typedistribution" value="1">&nbsp;Écart de 10</label> 
-    <label style="font-size:11px;"><input type="radio" id="courbe" name="typedistribution" value="2">&nbsp;Courbe</label> 
+    <label style="font-size:11px;"><input type="radio" id="ecart5" name="typedistribution" value="0">&nbsp;Écart de 5</label>
+    <label style="font-size:11px;"><input type="radio" id="ecart10" name="typedistribution" value="1">&nbsp;Écart de 10</label>
+    <label style="font-size:11px;"><input type="radio" id="courbe" name="typedistribution" value="2">&nbsp;Courbe</label>
     </div>`
             :/*html*/`
       <div style="margin:5px 5px 5px 20px;">Le graphique sera affiché quand au moins 15% des points seront notés</div>`
@@ -1180,7 +1240,7 @@ function gererPageNotes() {
             getNumber(notesGrp[i].innerHTML),
             getNumber(ecartsTypes[i].innerHTML),
             noteEstRentre)};`);
-        
+
         mesNotes[i].parentNode.classList.add('list-group-item');
 
         // console.log(mesNotes[i].parentNode);
@@ -1231,7 +1291,7 @@ function gererPageNotes() {
 
                 return order ? order.split('|') : [];
             },
-    
+
             /**
              * Save the order of elements. Called onEnd (when the item is dropped).
              * @param {Sortable}  sortable
@@ -1248,7 +1308,7 @@ function gererPageNotes() {
     let ordreNotes = Array.from(document.querySelectorAll(".list-group-item")).map(e => parseInt(e.getAttribute('idx')));
     // console.log(`ordreNotes`, ordreNotes);
     let donneesGraphiqueOrdonne = [];
-    
+
     // console.log(`donneesGraphique`, donneesGraphique);
 
     for (let i = 0; i < ordreNotes.length; i++) {
@@ -1377,7 +1437,7 @@ function gererPageNotes() {
                         max: 100,
                         stepSize: 20,
                         // callback: function (value, index, values) {
-                        //     if (value % 20 === 0) 
+                        //     if (value % 20 === 0)
                         //         return value;
                         //     return "";
                         // },
