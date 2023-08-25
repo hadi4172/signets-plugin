@@ -425,9 +425,7 @@ function gererPageCours() {
                     if(cours.programme == programme.code
                         && programme.sessions.some(s => s.id == cours.sessionReprise)) {
                         let session = programme.sessions.find(s => s.id == cours.sessionReprise);
-                        // let moyenneAjustee = (session.moyenne * session.credits) / (session.credits - cours.credits);
-                        // session.moyenne = moyenneAjustee;
-                        // session.credits -= cours.credits;
+
                         session.creditsReprise = 0;
                         session.creditsReprise += cours.credits;
                     }
@@ -759,7 +757,7 @@ function gererPageCours() {
                         });
                     }
 
-                    if (typeof arg[cle] !== "undefined" && /E/.test(noteCours[i].innerHTML) && !coursEchoues.some(e => e.cle === cle)) {
+                    if (typeof arg[cle] !== "undefined" && /[EL]/.test(noteCours[i].innerHTML) && !coursEchoues.some(e => e.cle === cle)) {
                         coursEchoues.push({
                             cle: cle,
                             programme: parseInt(programmeCours[i].innerHTML),
